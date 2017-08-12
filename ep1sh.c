@@ -21,20 +21,15 @@
 char **parseCommand(char *command)
 {
   int i, j;
-  char **parsedCommand, **bob;
+  char **parsedCommand;
   Buffer *B;
   i = j = 0;
   B = criaBuffer();
+  parsedCommand = malloc(sizeof(char*));
   while(command[i] != '\0'){
     if(isspace(command[i])){
-      printf("oi\n");
-      if(sizeof(parsedCommand) < (j + 1)*sizeof(char*)){
-        bob = malloc(sizeof(parsedCommand)*2);
-        for(int k = 0; k < j; k++) bob[k] = parsedCommand[k];
-        parsedCommand = bob;
-        free(bob);
-      }
-      printf("ciao\n");
+      if(sizeof(parsedCommand) < (j + 1)*sizeof(char*))
+        parsedCommand = realloc(parsedCommand, sizeof(parsedCommand)*2);
       parsedCommand[j] = malloc(B->top*sizeof(char));
       parsedCommand[j] = strncpy(parsedCommand[j], B->palavra, B->top);
       destroiBuffer(B);
