@@ -18,28 +18,36 @@
 #include "Buffer.h"
 
 //precisa resolver o tamanho dessas coisas
-char **parseCommand(char *command)
+char **parseCommand(char *command, int *n)
 {
   int i, j;
   char **parsedCommand;
   Buffer *B;
+  *n = 0;
   i = j = 0;
   B = criaBuffer();
   parsedCommand = malloc(sizeof(char*));
   while(command[i] != '\0'){
     if(isspace(command[i])){
-      if(sizeof(parsedCommand) < (j + 1)*sizeof(char*))
+      if(sizeof(parsedCommand) < (j)*sizeof(char*))
         parsedCommand = realloc(parsedCommand, sizeof(parsedCommand)*2);
       parsedCommand[j] = malloc(B->top*sizeof(char));
       parsedCommand[j] = strncpy(parsedCommand[j], B->palavra, B->top);
       destroiBuffer(B);
       B = criaBuffer();
+      *n += 1;
       j++;
     }
     else adicionaNoBuffer(B, command[i]);
     i++;
   }
+  if(sizeof(parsedCommand) < (j)*sizeof(char*))
+    parsedCommand = realloc(parsedCommand, sizeof(parsedCommand)*2);
+  parsedCommand[j] = malloc(B->top*sizeof(char));
+  parsedCommand[j] = strncpy(parsedCommand[j], B->palavra, B->top);
   destroiBuffer(B);
+  B = criaBuffer();
+  *n += 1;
   return parsedCommand;
 }
 
@@ -85,13 +93,14 @@ void date()
 
 int main()
 {
+  int cmds;
   pid_t child;
   char *command;
   char **parsedCommand;
   while(1){
     command = readline("$ ");
     add_history(command);
-    parsedCommand = parseCommand(command);
+    parsedCommand = parseCommand(command, &cmds);
     /*
     if(!(child = fork())){
       if(!strcmp(command, "date")) date();
