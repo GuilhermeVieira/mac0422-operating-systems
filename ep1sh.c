@@ -20,26 +20,29 @@
 //precisa resolver o tamanho dessas coisas
 char **parseCommand(char *command)
 {
-  int i = 0;
+  int i, j;
   char **parsedCommand, **bob;
-  int j = 0;
   Buffer *B;
+  i = j = 0;
   B = criaBuffer();
-  for(int i = 0; i < strlen(command); i++){
+  while(command[i] != '\0'){
     if(isspace(command[i])){
+      printf("oi\n");
       if(sizeof(parsedCommand) < (j + 1)*sizeof(char*)){
         bob = malloc(sizeof(parsedCommand)*2);
-        for(int k = 0; k < j; k++){
-          bob[k] = parsedCommand[k];
-          parsedCommand = bob;
-        }
+        for(int k = 0; k < j; k++) bob[k] = parsedCommand[k];
+        parsedCommand = bob;
+        free(bob);
       }
-      parsedCommand[j] = strdup(B->palavra); //precisa ter certeza que parsedCommand[j] existe
+      printf("ciao\n");
+      parsedCommand[j] = malloc(B->top*sizeof(char));
+      parsedCommand[j] = strncpy(parsedCommand[j], B->palavra, B->top);
       destroiBuffer(B);
       B = criaBuffer();
       j++;
     }
     else adicionaNoBuffer(B, command[i]);
+    i++;
   }
   destroiBuffer(B);
   return parsedCommand;
