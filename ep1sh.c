@@ -20,31 +20,30 @@
 //precisa resolver o tamanho dessas coisas
 char **parseCommand(char *command, int *n)
 {
-  int i, j;
+  int i;
   char **parsedCommand;
   Buffer *B;
   *n = 0;
-  i = j = 0;
+  i = 0;
   B = criaBuffer();
   parsedCommand = malloc(sizeof(char*));
   while(command[i] != '\0'){
     if(isspace(command[i])){
-      if(sizeof(parsedCommand) < (j)*sizeof(char*))
-        parsedCommand = realloc(parsedCommand, sizeof(parsedCommand)*2);
-      parsedCommand[j] = malloc(B->top*sizeof(char));
-      parsedCommand[j] = strncpy(parsedCommand[j], B->palavra, B->top);
+      if((*n)*sizeof(char*) > sizeof(parsedCommand))
+        parsedCommand = realloc(parsedCommand, (*n)*2*(sizeof(char *)));
+      parsedCommand[*n] = malloc(B->top*sizeof(char));
+      parsedCommand[*n] = strncpy(parsedCommand[*n], B->palavra, B->top);
       destroiBuffer(B);
       B = criaBuffer();
       *n += 1;
-      j++;
     }
     else adicionaNoBuffer(B, command[i]);
     i++;
   }
-  if(sizeof(parsedCommand) < (j)*sizeof(char*))
-    parsedCommand = realloc(parsedCommand, sizeof(parsedCommand)*2);
-  parsedCommand[j] = malloc(B->top*sizeof(char));
-  parsedCommand[j] = strncpy(parsedCommand[j], B->palavra, B->top);
+  if((*n)*sizeof(char*) > sizeof(parsedCommand))
+    parsedCommand = realloc(parsedCommand, sizeof(parsedCommand)*2*sizeof(char *));
+  parsedCommand[*n] = malloc(B->top*sizeof(char));
+  parsedCommand[*n] = strncpy(parsedCommand[*n], B->palavra, B->top);
   destroiBuffer(B);
   B = criaBuffer();
   *n += 1;
