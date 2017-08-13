@@ -88,8 +88,6 @@ void date()
   return;
 }
 
-
-
 int main()
 {
   int cmds;
@@ -100,14 +98,13 @@ int main()
     command = readline("$ ");
     add_history(command);
     parsedCommand = parseCommand(command, &cmds);
-    /*
     if(!(child = fork())){
       if(!strcmp(command, "date")) date();
-      else execlp(command, command,(char*)0);
+      else execvp(parsedCommand[0], parsedCommand);
+
       return 0;
     }
     waitpid(child, 0, 0);
-  */
   }
   return 0;
 }
