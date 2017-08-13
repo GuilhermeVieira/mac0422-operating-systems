@@ -1,7 +1,7 @@
 #include<stdlib.h>
 #include"Buffer.h"
 
-Buffer *criaBuffer()
+Buffer *createBuffer()
 {
     Buffer *B = malloc(sizeof(Buffer));
     B->max = 8;
@@ -10,7 +10,7 @@ Buffer *criaBuffer()
     return B;
 }
 
-void realocaBuffer(Buffer *B)
+void reallocBuffer(Buffer *B)
 {
     int i;
     char *Temp;
@@ -23,17 +23,17 @@ void realocaBuffer(Buffer *B)
     return;
 }
 
-void adicionaNoBuffer(Buffer *B, char c)
+void addToBuffer(Buffer *B, char c)
 {
     /*antes de adicionadar no buffer presisamos ver se ele esta cheio.
      */
-    if(B->top == B->max) realocaBuffer(B);
+    if(B->top == B->max) reallocBuffer(B);
     B->palavra[B->top] = c;
     B->top++;
     return;
 }
 
-void destroiBuffer(Buffer *B)
+void destroyBuffer(Buffer *B)
 {
     free(B->palavra);
     free(B);
