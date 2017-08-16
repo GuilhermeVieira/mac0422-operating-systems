@@ -1,5 +1,5 @@
 #include<stdio.h> //printf()
-#include<stdlib.h> //malloc(), realloc(), free(), sizeof()
+#include<stdlib.h> //realloc(), free(), sizeof()
 #include<time.h> //tm, ctime(), localtime()
 #include<string.h> //strcmp(), strlen(), strncpy
 #include<ctype.h> //isspace()
@@ -8,7 +8,7 @@
 #include<sys/wait.h>  //waitpid()
 #include<readline/readline.h> //readline()
 #include<readline/history.h> //readline()
-#include <pwd.h>
+#include <pwd.h> // passwd, getpwnam()
 #include"Buffer.h"
 
 
@@ -63,12 +63,25 @@ void date()
 
 void Chown(char **commands)
 {
-    struct passwd *userData;
-    char *grp;
-    userData = getpwnam(commands[2]);
-    grp = emalloc((strlen(commands[1])-1)*sizeof(char));
-    for(int i = 1, j = 0; i < strlen(commands[1]); i++, j++) grp[j] = commands[1][i];
-    chown(commands[0],-1,userData->pw_gid);
+    int i, j;
+    struct passwd *groupData, *userData;
+    Buffer *usr, *grp;
+    usr = createBuffer();
+    grp = createBuffer();
+    i = 0;
+    while(commands[1][i] != ':'){
+        addToBuffer(usr, commands[1][i]);
+        i++;
+    }
+    if(!usr->top) userData->pw_uid = -1;
+    else userData = getpwnam(usr->palavra);
+    i++;
+    for(j = i; j < strlen(commands[1]); j++) addToBuffer(grp,commands[1][j]);
+    if(!grp->top) groupData->pw_gid = -1;
+    else groupData = getpwnam(grp->palavra);
+    chown(commands[0], userData->pw_uid, groupData->pw_gid);
+    destroyBuffer(usr);
+    destroyBuffer(grp);
     return;
 }
 
@@ -95,7 +108,7 @@ int main()
             free(parsedCommand);
             return 0;
         }
-        else waitpid(child, 0, 0);
+        waitpid(child, 0, 0);
     }
     return 0;
 }
