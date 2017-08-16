@@ -24,4 +24,9 @@ void destroyBuffer(Buffer *B);
 /*função recebe um buffer e faz com que ele volte para seu estado original.
  */
 void clearBuffer(Buffer *B);
+/*função recebe o tamanho para allocar um ponteiro e devolve a posição inicial,
+ *se houver um erro na alocação a função imprime uma menssagem de erro e acaba o
+ *processo.
+ */
+void *emalloc(size_t size);
 #endif

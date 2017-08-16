@@ -1,12 +1,13 @@
 #include<stdlib.h>
+#include<stdio.h>
 #include"Buffer.h"
 
 Buffer *createBuffer()
 {
-    Buffer *B = malloc(sizeof(Buffer));
+    Buffer *B = emalloc(sizeof(Buffer));
     B->max = 8;
     B->top = 0;
-    B->palavra = malloc(B->max*sizeof(char));
+    B->palavra = emalloc(B->max*sizeof(char));
     return B;
 }
 
@@ -14,7 +15,7 @@ void reallocBuffer(Buffer *B)
 {
     int i;
     char *Temp;
-    Temp = malloc(2*B->max*sizeof(char));
+    Temp = emalloc(2*B->max*sizeof(char));
     for(i = 0; i < B->max; i++)
         Temp[i] = B->palavra[i];
     free(B->palavra);
@@ -46,4 +47,15 @@ void clearBuffer(Buffer *B)
      */
     B->top = 0;
     return;
+}
+
+void *emalloc(size_t size)
+{
+    void *pointer;
+    pointer = malloc(size);
+    if(pointer == NULL){
+        printf("There was an error with the malloc function\n");
+        exit(EXIT_FAILURE);
+    }
+    else return pointer;
 }

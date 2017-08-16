@@ -21,12 +21,13 @@ char **parseCommand(char *command, int *n)
     Buffer *B;
     *n = 0;
     B = createBuffer();
-    parsedCommand = malloc(sizeof(char*));
+    parsedCommand = emalloc(sizeof(char*));
     while(command[i] != '\0'){
         if(isspace(command[i])){
+            addToBuffer(B, '\0');
             if((*n)*sizeof(char*) > sizeof(parsedCommand))
                 parsedCommand = realloc(parsedCommand, (*n)*2*(sizeof(char *)));
-            parsedCommand[*n] = malloc(B->top*sizeof(char));
+            parsedCommand[*n] = emalloc(B->top*sizeof(char));
             parsedCommand[*n] = strncpy(parsedCommand[*n], B->palavra, B->top);
             clearBuffer(B);
             (*n)++;
@@ -34,9 +35,10 @@ char **parseCommand(char *command, int *n)
         else addToBuffer(B, command[i]);
         i++;
     }
+    addToBuffer(B, '\0');
     if((*n)*sizeof(char*) > sizeof(parsedCommand))
         parsedCommand = realloc(parsedCommand, (*n)*2*(sizeof(char *)));
-    parsedCommand[*n] = malloc(B->top*sizeof(char));
+    parsedCommand[*n] = emalloc(B->top*sizeof(char));
     parsedCommand[*n] = strncpy(parsedCommand[*n], B->palavra, B->top);
     clearBuffer(B);
     (*n)++;
@@ -64,7 +66,7 @@ void Chown(char **commands)
     struct passwd *userData;
     char *grp;
     userData = getpwnam(commands[2]);
-    grp = malloc((strlen(commands[1])-1)*sizeof(char));
+    grp = emalloc((strlen(commands[1])-1)*sizeof(char));
     for(int i = 1, j = 0; i < strlen(commands[1]); i++, j++) grp[j] = commands[1][i];
     chown(commands[0],-1,userData->pw_gid);
     return;
@@ -79,7 +81,12 @@ int main()
     while(1){
         command = readline("$ ");
         add_history(command);
-        if(!(child = fork())){
+        child = fork();
+        if(child == -1){
+            printf("there was a problem with fork(), the command was not executed\n");
+            continue;
+        }
+        else if(!child){
             parsedCommand = parseCommand(command, &cmds);
             if(!strcmp(parsedCommand[0], "date")) date();
             else if(!strcmp(parsedCommand[0], "chown")) Chown(parsedCommand);
@@ -88,7 +95,7 @@ int main()
             free(parsedCommand);
             return 0;
         }
-        waitpid(child, 0, 0);
+        else waitpid(child, 0, 0);
     }
     return 0;
 }
