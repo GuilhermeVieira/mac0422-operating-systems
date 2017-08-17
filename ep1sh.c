@@ -65,10 +65,9 @@ void date()
 void Chown(char **commands)
 {
     int i, j;
-    struct stat *groupData, *userData;
+    struct passwd *userData;
+    struct group *groupData;
     Buffer *usr, *grp;
-    groupData = emalloc(sizeof(struct stat));
-    userData = emalloc(sizeof(struct stat));
     usr = createBuffer();
     grp = createBuffer();
     i = 0;
@@ -76,15 +75,13 @@ void Chown(char **commands)
         addToBuffer(usr, commands[1][i]);
         i++;
     }
-    if(!usr->top) userData->st_uid = -1;
-    else stat(usr->palavra, userData);
+    if(!usr->top) userData->pw_uid = -1;
+    else userData = getpwnam(usr->palavra);
     i++;
     for(j = i; j < strlen(commands[1]); j++) addToBuffer(grp,commands[1][j]);
-    if(!grp->top) groupData->st_gid = -1;
-    else stat(grp->palavra, groupData);
-    chown(commands[2], userData->st_uid, groupData->st_gid);
-    free(groupData);
-    free(userData);
+    if(!grp->top) groupData->gr_gid = -1;
+    else groupData = getgrnam(grp->palavra);
+    chown(commands[2], userData->pw_uid, groupData->gr_gid);
     destroyBuffer(usr);
     destroyBuffer(grp);
     return;
