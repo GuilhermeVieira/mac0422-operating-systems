@@ -8,9 +8,10 @@
 #include<sys/wait.h>  //waitpid()
 #include<readline/readline.h> //readline()
 #include<readline/history.h> //readline()
-#include <pwd.h> // passwd, getpwnam()
+#include<pwd.h> // passwd, getpwnam()
+#include <grp.h>
 #include"Buffer.h"
-
+#include <sys/stat.h>
 
 
 //precisa resolver o tamanho dessas coisas
@@ -64,8 +65,10 @@ void date()
 void Chown(char **commands)
 {
     int i, j;
-    struct passwd *groupData, *userData;
+    struct stat *groupData, *userData;
     Buffer *usr, *grp;
+    groupData = emalloc(sizeof(struct stat));
+    userData = emalloc(sizeof(struct stat));
     usr = createBuffer();
     grp = createBuffer();
     i = 0;
@@ -73,13 +76,15 @@ void Chown(char **commands)
         addToBuffer(usr, commands[1][i]);
         i++;
     }
-    if(!usr->top) userData->pw_uid = -1;
-    else userData = getpwnam(usr->palavra);
+    if(!usr->top) userData->st_uid = -1;
+    else stat(usr->palavra, userData);
     i++;
     for(j = i; j < strlen(commands[1]); j++) addToBuffer(grp,commands[1][j]);
-    if(!grp->top) groupData->pw_gid = -1;
-    else groupData = getpwnam(grp->palavra);
-    chown(commands[0], userData->pw_uid, groupData->pw_gid);
+    if(!grp->top) groupData->st_gid = -1;
+    else stat(grp->palavra, groupData);
+    chown(commands[2], userData->st_uid, groupData->st_gid);
+    free(groupData);
+    free(userData);
     destroyBuffer(usr);
     destroyBuffer(grp);
     return;
