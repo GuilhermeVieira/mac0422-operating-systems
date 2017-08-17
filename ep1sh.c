@@ -1,90 +1,50 @@
-#include<stdio.h> //printf()
-#include<stdlib.h> //realloc(), free(), sizeof()
-#include<time.h> //tm, ctime(), localtime()
-#include<string.h> //strcmp(), strlen(), strncpy
-#include<ctype.h> //isspace()
-#include<unistd.h> //pid_t, fork(), execvp()
-#include<sys/types.h> //waitpid()
-#include<sys/wait.h>  //waitpid()
-#include<readline/readline.h> //readline()
-#include<readline/history.h> //readline()
-#include<pwd.h> // passwd, getpwnam()
-#include <grp.h>
+#include<stdio.h> //printf().
+#include<stdlib.h> //realloc(), free(), sizeof().
+#include<string.h> //strcmp(), strlen(), strncpy().
+#include<ctype.h> //isspace().
+#include<unistd.h> //pid_t, fork(), execvp().
+#include<sys/types.h> //pid_t.
+#include<sys/wait.h>  //waitpid().
+#include<readline/readline.h> //readline().
+#include<readline/history.h> //add_history().
 #include"Buffer.h"
-#include <sys/stat.h>
+#include"embdCmds.h"
 
-
-//precisa resolver o tamanho dessas coisas
-char **parseCommand(char *command, int *n)
+/*esta função recebe o comando dado para o shell e um ponteiro que ira armazenar
+ *o numero de argumentos. A função ira separar os argumentos e armazenalos em
+ *um vetor de strings que sera devolvido para que o comando possa ser executado.
+ */
+char **parse_command(char *command, int *n)
 {
-    int i = 0;
-    char **parsedCommand;
+    char **parsed_command;
     Buffer *B;
     *n = 0;
-    B = createBuffer();
-    parsedCommand = emalloc(sizeof(char*));
-    while(command[i] != '\0'){
-        if(isspace(command[i])){
-            addToBuffer(B, '\0');
-            if((*n)*sizeof(char*) > sizeof(parsedCommand))
-                parsedCommand = realloc(parsedCommand, (*n)*2*(sizeof(char *)));
-            parsedCommand[*n] = emalloc(B->top*sizeof(char));
-            parsedCommand[*n] = strncpy(parsedCommand[*n], B->palavra, B->top);
-            clearBuffer(B);
+    B = create_buffer();
+    parsed_command = emalloc(sizeof(char*));
+    for(int i = 0; command[i] != '\0'; i++){
+        if(isspace(command[i])){//o espaço indica o final de um argumento.
+            add_to_buffer(B, '\0');
+            if((*n)*sizeof(char*) > sizeof(parsed_command))
+                parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
+            parsed_command[*n] = emalloc(B->top*sizeof(char));
+            parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
             (*n)++;
+            clear_buffer(B);//o Buffer deve ser ter seu tamanho "reiniciado".
         }
-        else addToBuffer(B, command[i]);
-        i++;
+        else add_to_buffer(B, command[i]);
     }
-    addToBuffer(B, '\0');
-    if((*n)*sizeof(char*) > sizeof(parsedCommand))
-        parsedCommand = realloc(parsedCommand, (*n)*2*(sizeof(char *)));
-    parsedCommand[*n] = emalloc(B->top*sizeof(char));
-    parsedCommand[*n] = strncpy(parsedCommand[*n], B->palavra, B->top);
-    clearBuffer(B);
+    /*o ultimo argumento ainda não foi adicionado no parsed_command neste ponto
+     *da execução.
+     */
+    add_to_buffer(B, '\0');
+    if((*n)*sizeof(char*) > sizeof(parsed_command))
+        parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
+    parsed_command[*n] = emalloc(B->top*sizeof(char));
+    parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
     (*n)++;
-    destroyBuffer(B);
-    return parsedCommand;
-}
-
-void date()
-{
-    char *dayInfo;
-    struct tm *clock;
-    time_t epochtime;
-    time(&epochtime);
-    dayInfo = ctime(&epochtime);
-    for(int i = 0; i < strlen(dayInfo) - 5; i++){
-        printf("%c", dayInfo[i]);
-    }
-    clock = localtime(&epochtime);
-    printf("%s %d\n", clock->tm_zone, clock->tm_year + 1900);
-    return;
-}
-
-void Chown(char **commands)
-{
-    int i, j;
-    struct passwd *userData;
-    struct group *groupData;
-    Buffer *usr, *grp;
-    usr = createBuffer();
-    grp = createBuffer();
-    i = 0;
-    while(commands[1][i] != ':'){
-        addToBuffer(usr, commands[1][i]);
-        i++;
-    }
-    if(!usr->top) userData->pw_uid = -1;
-    else userData = getpwnam(usr->palavra);
-    i++;
-    for(j = i; j < strlen(commands[1]); j++) addToBuffer(grp,commands[1][j]);
-    if(!grp->top) groupData->gr_gid = -1;
-    else groupData = getgrnam(grp->palavra);
-    chown(commands[2], userData->pw_uid, groupData->gr_gid);
-    destroyBuffer(usr);
-    destroyBuffer(grp);
-    return;
+    clear_buffer(B);
+    destroy_buffer(B);
+    return parsed_command;
 }
 
 int main()
@@ -92,22 +52,22 @@ int main()
     int cmds;
     pid_t child;
     char *command;
-    char **parsedCommand;
+    char **parsed_command;
     while(1){
-        command = readline("$ ");
-        add_history(command);
+        command = readline("$ ");//imprime no terminal e recebe o input.
+        add_history(command);//adiciona o historico de comandos.
         child = fork();
         if(child == -1){
             printf("there was a problem with fork(), the command was not executed\n");
             continue;
         }
         else if(!child){
-            parsedCommand = parseCommand(command, &cmds);
-            if(!strcmp(parsedCommand[0], "date")) date();
-            else if(!strcmp(parsedCommand[0], "chown")) Chown(parsedCommand);
-            else execvp(parsedCommand[0], parsedCommand);
-            for(int i = 0; i < cmds; i++) free(parsedCommand[i]);
-            free(parsedCommand);
+            parsed_command = parse_command(command, &cmds);
+            if(!strcmp(parsed_command[0], "date")) embd_date();
+            else if(!strcmp(parsed_command[0], "chown")) embd_chown(parsed_command);
+            else execvp(parsed_command[0], parsed_command);
+            for(int i = 0; i < cmds; i++) free(parsed_command[i]);
+            free(parsed_command);
             return 0;
         }
         waitpid(child, 0, 0);
