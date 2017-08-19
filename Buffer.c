@@ -1,6 +1,6 @@
-#include<stdio.h>   //printf().
-#include<stdlib.h> //EXIT_FAILURE, malloc(), free(), sizeof().
-#include"Buffer.h"
+#include <stdio.h>   //printf().
+#include <stdlib.h> //EXIT_FAILURE, malloc(), free(), sizeof().
+#include "Buffer.h"
 
 Buffer *createBuffer()
 {

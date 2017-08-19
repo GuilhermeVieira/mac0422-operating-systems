@@ -1,17 +1,30 @@
-#include<stdio.h> //printf().
-#include<stdlib.h> //realloc(), free(), sizeof().
-#include<string.h> //strcmp(), strlen(), strncpy().
-#include<ctype.h> //isspace().
-#include<unistd.h> //pid_t, fork(), execvp().
-#include<sys/types.h> //pid_t.
-#include<sys/wait.h>  //waitpid().
-#include<readline/readline.h> //readline().
-#include<readline/history.h> //add_history().
-#include"Buffer.h"
-#include"embdCmds.h"
+#include <stdio.h> //printf().
+#include <stdlib.h> //realloc(), free(), sizeof().
+#include <string.h> //strcmp(), strlen(), strncpy().
+#include <ctype.h> //isspace().
+#include <unistd.h> //pid_t, fork(), execvp().
+#include <sys/types.h> //pid_t.
+#include <sys/wait.h>  //waitpid().
+#include <readline/readline.h> //readline().
+#include <readline/history.h> //add_history().
+#include <libexplain/execvp.h> //Libs to debug
+#include <errno.h>
+#include "Buffer.h"
+#include "embdCmds.h"
 
- #include <libexplain/execvp.h> //Libs to debug
- #include <errno.h>
+char **addToParcomm(char **parsed_command, Buffer *B, int *n)
+{
+    addToBuffer(B, '\0');
+    if((*n)*sizeof(char*) >= sizeof(parsed_command))
+        parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
+    parsed_command[*n] = emalloc(B->top*sizeof(char));
+    parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
+    (*n)++;
+    clearBuffer(B);//o Buffer deve ser ter seu tamanho "reiniciado".
+    return parsed_command;
+}
+
+
 
 /*esta função recebe o comando dado para o shell e um ponteiro que ira armazenar
  *o numero de argumentos. A função ira separar os argumentos e armazenalos em
@@ -25,48 +38,43 @@ char **parseCommand(char *command, int *n)
     B = createBuffer();
     parsed_command = emalloc(sizeof(char*));
     for (int i = 0; command[i] != '\0'; i++){
-        if(isspace(command[i])){//o espaço indica o final de um argumento.
-            addToBuffer(B, '\0');
-            if((*n)*sizeof(char*) >= sizeof(parsed_command))
-                parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
-            parsed_command[*n] = emalloc(B->top*sizeof(char));
-            parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
-            (*n)++;
-            clearBuffer(B);//o Buffer deve ser ter seu tamanho "reiniciado".
-        }
-        else addToBuffer(B, command[i]);
+        if(isspace(command[i]))//o espaço indica o final de um argumento.
+            parsed_command = addToParcomm(parsed_command, B, n);
+        else
+            addToBuffer(B, command[i]);
     }
     /*o ultimo argumento ainda não foi adicionado no parsed_command neste ponto
      *da execução.
      */
-    addToBuffer(B, '\0');
-    //printf("%lu %lu\n", (*n)*sizeof(char*), sizeof(parsed_command));
+    parsed_command = addToParcomm(parsed_command, B, n);
+    /*Temos que adicionar um \0 no final de parsed_command para que a função
+     *execvp funcione como o experado.
+     */
     if((*n)*sizeof(char*) >= sizeof(parsed_command))
         parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
-    parsed_command[*n] = emalloc(B->top*sizeof(char));
-    parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
-    (*n)++;
-
-    //CORREÇÃO DO ERRO DO LS NA PRIMEIRA VEZz
-
-    if((*n)*sizeof(char*) >= sizeof(parsed_command))
-        parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
-    parsed_command[*n] = emalloc(sizeof(parsed_command[*n]));
+    parsed_command[*n] = emalloc(sizeof(char));
     parsed_command[*n] = '\0';
     (*n)++;
-
-    clearBuffer(B);
     destroyBuffer(B);
     return parsed_command;
 }
 
 int main()
 {
-    int cmds;
+    int cmds, size;
     pid_t child;
-    char *command;
+    char *command, *directory, *temp;
     char **parsed_command;
-    while(1){
+    while(1){//ve isso que ta bugado
+        size = 8;
+        temp = emalloc(size*sizeof(char));
+        directory = getcwd(temp, size);
+        while(directory == NULL && errno == ERANGE){
+            size *= 2;
+            temp = realloc(temp, size*sizeof(char));
+            directory = getcwd(temp, size);
+        }
+        printf("[%s]", directory);
         command = readline("$ ");//imprime no terminal e recebe o input.
         add_history(command);//adiciona o historico de comandos.
         child = fork();
@@ -93,10 +101,12 @@ int main()
                 free(parsed_command[i]);
             free(parsed_command);
             free(command);
+            free(temp);
             return 0;
         }
         waitpid(child, 0, 0);
         free(command);
+        free(temp);
     }
     return 0;
 }
