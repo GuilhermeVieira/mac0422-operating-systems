@@ -62,9 +62,9 @@ char **parseCommand(char *command, int *n)
 int main()
 {
     int cmds, size;
-    pid_t child;
-    char *command, *directory, *temp;
+    char *command, *directory, *temp, *prompt;;
     char **parsed_command;
+    pid_t child;
     while(1){//ve isso que ta bugado
         size = 8;
         temp = emalloc(size*sizeof(char));
@@ -74,9 +74,13 @@ int main()
             temp = realloc(temp, size*sizeof(char));
             directory = getcwd(temp, size);
         }
-        printf("[%s]", directory);
-        command = readline("$ ");//imprime no terminal e recebe o input.
-        add_history(command);//adiciona o historico de comandos.
+        prompt = emalloc((5 + strlen(directory))*sizeof(char));
+        prompt = strcpy(prompt, "[\0");
+        prompt = strcat(prompt, directory);
+        prompt = strcat(prompt, "]$ \0");
+        command = readline(prompt);
+        free(prompt);
+        add_history(command); //adiciona o historico de comandos.
         child = fork();
         if(child == -1){
             printf("there was a problem with fork(), the command was not executed\n");
