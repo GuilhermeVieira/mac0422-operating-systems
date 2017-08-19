@@ -6,11 +6,14 @@
 #include<grp.h> // group, getgrnam().
 #include"Buffer.h"
 
+#include<stdlib.h>
+
 void embd_date()
 {
     char *day_info;
     struct tm *clock;
     time_t epochtime;
+    clock = emalloc(sizeof(struct tm));
     time(&epochtime);
     day_info = ctime(&epochtime);
     for(int i = 0; i < strlen(day_info) - 5; i++){
@@ -29,6 +32,8 @@ void embd_chown(char **commands)
     Buffer *usr, *grp;
     usr = create_buffer();
     grp = create_buffer();
+    user_data = emalloc(sizeof(struct passwd));
+    group_data = emalloc(sizeof(struct group));
     i = 0;
     while(commands[1][i] != ':'){
         add_to_buffer(usr, commands[1][i]);
