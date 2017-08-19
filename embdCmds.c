@@ -8,7 +8,7 @@
 
 #include<stdlib.h>
 
-void embd_date()
+void embdDate()
 {
     char *day_info;
     struct tm *clock;
@@ -16,43 +16,46 @@ void embd_date()
     clock = emalloc(sizeof(struct tm));
     time(&epochtime);
     day_info = ctime(&epochtime);
-    for(int i = 0; i < strlen(day_info) - 5; i++){
+    for(int i = 0; i < strlen(day_info) - 5; i++)
         printf("%c", day_info[i]);
-    }
+    free(clock);
     clock = localtime(&epochtime);
     printf("%s %d\n", clock->tm_zone, clock->tm_year + 1900);
     return;
 }
 
-void embd_chown(char **commands)
+void embdChown(char **commands)
 {
     int i, j;
     struct passwd *user_data;
     struct group *group_data;
     Buffer *usr, *grp;
-    usr = create_buffer();
-    grp = create_buffer();
+    usr = createBuffer();
+    grp = createBuffer();
     user_data = emalloc(sizeof(struct passwd));
     group_data = emalloc(sizeof(struct group));
     i = 0;
     while(commands[1][i] != ':'){
-        add_to_buffer(usr, commands[1][i]);
+        addToBuffer(usr, commands[1][i]);
         i++;
     }
-    if(!usr->top) user_data->pw_uid = -1;
+    if(!usr->top)
+        user_data->pw_uid = -1;
     else{
-        add_to_buffer(usr, '\0');
+        addToBuffer(usr, '\0');
         user_data = getpwnam(usr->palavra);
     }
     i++;
-    for(j = i; j < strlen(commands[1]); j++) add_to_buffer(grp,commands[1][j]);
-    if(!grp->top) group_data->gr_gid = -1;
+    for(j = i; j < strlen(commands[1]); j++)
+        addToBuffer(grp,commands[1][j]);
+    if(!grp->top)
+        group_data->gr_gid = -1;
     else{
-        add_to_buffer(grp, '\0');
+        addToBuffer(grp, '\0');
         group_data = getgrnam(grp->palavra);
     }
     chown(commands[2], user_data->pw_uid, group_data->gr_gid);
-    destroy_buffer(usr);
-    destroy_buffer(grp);
+    destroyBuffer(usr);
+    destroyBuffer(grp);
     return;
 }

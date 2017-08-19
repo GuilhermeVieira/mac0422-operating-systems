@@ -4,11 +4,11 @@
 /*função sem srgumentos que imprime na saida padrão o dia da semana,mes,dia,
  *horario,
  */
-void embd_date();
+void embdDate();
 
 /*Função recebe um vetor contendo os argumentos da syscall chown() e aplica eles
  *a função.
  */
-void embd_chown(char **commands);
+void embdChown(char **commands);
 
 #endif

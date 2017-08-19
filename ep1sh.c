@@ -17,50 +17,46 @@
  *o numero de argumentos. A função ira separar os argumentos e armazenalos em
  *um vetor de strings que sera devolvido para que o comando possa ser executado.
  */
-char **parse_command(char *command, int *n)
+char **parseCommand(char *command, int *n)
 {
     char **parsed_command;
     Buffer *B;
     *n = 0;
-    B = create_buffer();
+    B = createBuffer();
     parsed_command = emalloc(sizeof(char*));
     for (int i = 0; command[i] != '\0'; i++){
         if(isspace(command[i])){//o espaço indica o final de um argumento.
-            add_to_buffer(B, '\0');
+            addToBuffer(B, '\0');
             if((*n)*sizeof(char*) >= sizeof(parsed_command))
                 parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
             parsed_command[*n] = emalloc(B->top*sizeof(char));
             parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
-            //printf("%s\n", B->palavra);
-            //printf("%s\n", parsed_command[*n]);
             (*n)++;
-            clear_buffer(B);//o Buffer deve ser ter seu tamanho "reiniciado".
+            clearBuffer(B);//o Buffer deve ser ter seu tamanho "reiniciado".
         }
-        else add_to_buffer(B, command[i]);
+        else addToBuffer(B, command[i]);
     }
     /*o ultimo argumento ainda não foi adicionado no parsed_command neste ponto
      *da execução.
      */
-    add_to_buffer(B, '\0');
+    addToBuffer(B, '\0');
     //printf("%lu %lu\n", (*n)*sizeof(char*), sizeof(parsed_command));
-    if((*n)*sizeof(char*) >= sizeof(parsed_command)) {
+    if((*n)*sizeof(char*) >= sizeof(parsed_command))
         parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
-    }
     parsed_command[*n] = emalloc(B->top*sizeof(char));
     parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
     (*n)++;
 
     //CORREÇÃO DO ERRO DO LS NA PRIMEIRA VEZz
 
-    if((*n)*sizeof(char*) >= sizeof(parsed_command)) {
+    if((*n)*sizeof(char*) >= sizeof(parsed_command))
         parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
-    }
     parsed_command[*n] = emalloc(sizeof(parsed_command[*n]));
     parsed_command[*n] = '\0';
     (*n)++;
 
-    clear_buffer(B);
-    destroy_buffer(B);
+    clearBuffer(B);
+    destroyBuffer(B);
     return parsed_command;
 }
 
@@ -79,25 +75,28 @@ int main()
             continue;
         }
         else if(!child){
-            parsed_command = parse_command(command, &cmds);
-            if(!strcmp(parsed_command[0], "date")) embd_date();
-            else if(!strcmp(parsed_command[0], "chown")) embd_chown(parsed_command);
-            //else if (!strcmp(parsed_command[0], "")) {}
+            parsed_command = parseCommand(command, &cmds);
+            if(!strcmp(parsed_command[0], "date"))
+                embdDate();
+            else if(!strcmp(parsed_command[0], "chown"))
+                embdChown(parsed_command);
             else if (strcmp(parsed_command[0], "")) {
-              if (execvp(parsed_command[0], parsed_command) == -1){
-                printf("FUDEU!\n");
-                fprintf(stderr, "%s\n", explain_execvp(parsed_command[0],parsed_command));
-                printf("------------------\n");
-                int err = errno;
-                fprintf(stderr, "%s\n", explain_errno_execvp(err,parsed_command[0],parsed_command));
-                exit(EXIT_FAILURE);
-              }
+                if (execvp(parsed_command[0], parsed_command) == -1){
+                    fprintf(stderr, "%s\n", explain_execvp(parsed_command[0],parsed_command));
+                    printf("------------------\n");
+                    int err = errno;
+                    fprintf(stderr, "%s\n", explain_errno_execvp(err,parsed_command[0],parsed_command));
+                    exit(EXIT_FAILURE);
+                }
             }
-            for(int i = 0; i < cmds; i++) free(parsed_command[i]);
+            for(int i = 0; i < cmds; i++)
+                free(parsed_command[i]);
             free(parsed_command);
+            free(command);
             return 0;
         }
         waitpid(child, 0, 0);
+        free(command);
     }
     return 0;
 }
