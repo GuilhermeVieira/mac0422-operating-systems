@@ -58,25 +58,33 @@ char **parseCommand(char *command, int *n)
     return parsed_command;
 }
 
+char *getDirectory(char *prompt)
+{
+    int size = 8;
+    char *temp, *directory;
+    temp = emalloc(size*sizeof(char));
+    directory = getcwd(temp, size);
+    while (directory == NULL && errno == ERANGE) {
+        size *= 2;
+        temp = realloc(temp, size*sizeof(char));
+        directory = getcwd(temp, size);
+    }
+    prompt = emalloc((5 + strlen(directory))*sizeof(char));
+    prompt = strcpy(prompt, "[\0");
+    prompt = strcat(prompt, directory);
+    prompt = strcat(prompt, "]$ \0");
+    free(temp);
+    return prompt;
+}
+
 int main()
 {
-    int cmds, size;
-    char *command, *directory, *temp, *prompt;;
+    int cmds;
+    char *command, *prompt;
     char **parsed_command;
     pid_t child;
     while (1) {//ve isso que ta bugado
-        size = 8;
-        temp = emalloc(size*sizeof(char));
-        directory = getcwd(temp, size);
-        while (directory == NULL && errno == ERANGE) {
-            size *= 2;
-            temp = realloc(temp, size*sizeof(char));
-            directory = getcwd(temp, size);
-        }
-        prompt = emalloc((5 + strlen(directory))*sizeof(char));
-        prompt = strcpy(prompt, "[\0");
-        prompt = strcat(prompt, directory);
-        prompt = strcat(prompt, "]$ \0");
+        prompt = getDirectory(prompt);
         command = readline(prompt);
         free(prompt);
         add_history(command); //adiciona o historico de comandos.
@@ -104,12 +112,10 @@ int main()
                 free(parsed_command[i]);
             free(parsed_command);
             free(command);
-            free(temp);
             return 0;
         }
         waitpid(child, 0, 0);
         free(command);
-        free(temp);
     }
     return 0;
 }
