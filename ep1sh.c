@@ -15,7 +15,7 @@
 char **addToParcomm(char **parsed_command, Buffer *B, int *n)
 {
     addToBuffer(B, '\0');
-    if((*n)*sizeof(char*) >= sizeof(parsed_command))
+    if ((*n)*sizeof(char*) >= sizeof(parsed_command))
         parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
     parsed_command[*n] = emalloc(B->top*sizeof(char));
     parsed_command[*n] = strncpy(parsed_command[*n], B->palavra, B->top*sizeof(char));
@@ -37,8 +37,8 @@ char **parseCommand(char *command, int *n)
     *n = 0;
     B = createBuffer();
     parsed_command = emalloc(sizeof(char*));
-    for (int i = 0; command[i] != '\0'; i++){
-        if(isspace(command[i]))//o espaço indica o final de um argumento.
+    for (int i = 0; command[i] != '\0'; i++) {
+        if (isspace(command[i]))//o espaço indica o final de um argumento.
             parsed_command = addToParcomm(parsed_command, B, n);
         else
             addToBuffer(B, command[i]);
@@ -50,9 +50,8 @@ char **parseCommand(char *command, int *n)
     /*Temos que adicionar um \0 no final de parsed_command para que a função
      *execvp funcione como o experado.
      */
-    if((*n)*sizeof(char*) >= sizeof(parsed_command))
+    if ((*n)*sizeof(char*) >= sizeof(parsed_command))
         parsed_command = realloc(parsed_command, (*n)*2*(sizeof(char *)));
-    parsed_command[*n] = emalloc(sizeof(char));
     parsed_command[*n] = '\0';
     (*n)++;
     destroyBuffer(B);
@@ -65,11 +64,11 @@ int main()
     char *command, *directory, *temp, *prompt;;
     char **parsed_command;
     pid_t child;
-    while(1){//ve isso que ta bugado
+    while (1) {//ve isso que ta bugado
         size = 8;
         temp = emalloc(size*sizeof(char));
         directory = getcwd(temp, size);
-        while(directory == NULL && errno == ERANGE){
+        while (directory == NULL && errno == ERANGE) {
             size *= 2;
             temp = realloc(temp, size*sizeof(char));
             directory = getcwd(temp, size);
@@ -82,18 +81,18 @@ int main()
         free(prompt);
         add_history(command); //adiciona o historico de comandos.
         child = fork();
-        if(child == -1){
+        if (child == -1) {
             printf("there was a problem with fork(), the command was not executed\n");
             continue;
         }
-        else if(!child){
+        else if (!child) {
             parsed_command = parseCommand(command, &cmds);
-            if(!strcmp(parsed_command[0], "date"))
+            if (!strcmp(parsed_command[0], "date"))
                 embdDate();
-            else if(!strcmp(parsed_command[0], "chown"))
+            else if (!strcmp(parsed_command[0], "chown"))
                 embdChown(parsed_command);
             else if (strcmp(parsed_command[0], "")) {
-                if (execvp(parsed_command[0], parsed_command) == -1){
+                if (execvp(parsed_command[0], parsed_command) == -1) {
                     fprintf(stderr, "%s\n", explain_execvp(parsed_command[0],parsed_command));
                     printf("------------------\n");
                     int err = errno;
@@ -101,7 +100,7 @@ int main()
                     exit(EXIT_FAILURE);
                 }
             }
-            for(int i = 0; i < cmds; i++)
+            for (int i = 0; i < cmds; i++)
                 free(parsed_command[i]);
             free(parsed_command);
             free(command);

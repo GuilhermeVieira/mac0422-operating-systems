@@ -16,7 +16,7 @@ void embdDate()
     clock = emalloc(sizeof(struct tm));
     time(&epochtime);
     day_info = ctime(&epochtime);
-    for(int i = 0; i < strlen(day_info) - 5; i++)
+    for (int i = 0; i < strlen(day_info) - 5; i++)
         printf("%c", day_info[i]);
     free(clock);
     clock = localtime(&epochtime);
@@ -35,23 +35,23 @@ void embdChown(char **commands)
     usr = createBuffer();
     grp = createBuffer();
     i = 0;
-    while(commands[1][i] != ':'){
+    while (commands[1][i] != ':') {
         addToBuffer(usr, commands[1][i]);
         i++;
     }
-    if(!usr->top)
+    if (!usr->top)
         uid = -1;
-    else{
+    else {
         addToBuffer(usr, '\0');
         user_data = getpwnam(usr->palavra);
         uid = user_data->pw_uid;
     }
     i++;
-    for(j = i; j < strlen(commands[1]); j++)
+    for (j = i; j < strlen(commands[1]); j++)
         addToBuffer(grp,commands[1][j]);
-    if(!grp->top)
+    if (!grp->top)
         gid = -1;
-    else{
+    else {
         addToBuffer(grp, '\0');
         group_data = getgrnam(grp->palavra);
         gid = group_data->gr_gid;

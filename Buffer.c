@@ -16,7 +16,7 @@ void reallocBuffer(Buffer *B)
     int i;
     char *Temp;
     Temp = emalloc(2*B->max*sizeof(char));
-    for(i = 0; i < B->max; i++)
+    for (i = 0; i < B->max; i++)
         Temp[i] = B->palavra[i];
     free(B->palavra);
     B->max = 2*B->max;
@@ -28,7 +28,7 @@ void addToBuffer(Buffer *B, char c)
 {
     /*antes de adicionadar no buffer presisamos ver se ele esta cheio.
      */
-    if(B->top == B->max)
+    if (B->top == B->max)
         reallocBuffer(B);
     B->palavra[B->top] = c;
     B->top++;
@@ -54,7 +54,7 @@ void *emalloc(size_t size)
 {
     void *pointer;
     pointer = malloc(size);
-    if(pointer == NULL){
+    if (pointer == NULL) {
         fprintf (stderr, "There was an error with the malloc function\n");
         exit(EXIT_FAILURE);
     }
