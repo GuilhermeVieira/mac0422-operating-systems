@@ -19,3 +19,18 @@ void destroyProcess(process *P)
     free(P);
     return;
 }
+
+bob *creatBob()
+{
+    bob *newBob = emalloc(sizeof(bob));
+    newBob->max = MAXNUMBER;
+    newBob->top = 0;
+    return newBob;
+}
+
+void destroyBob()
+{
+    free(bob->process_list);
+    free(bob);
+    return;
+}

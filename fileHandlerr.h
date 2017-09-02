@@ -10,10 +10,16 @@ typedef struct {
                 char *name;
                 } process;
 
+typedef struct  {
+                process *process_list;
+                int max;
+                int top;
+                } bob;
 
 process *createProcess(double t0, double dt, double deadline, char *name);
 
 void destroyProcess(process *P);
 
+bob *creatBob();
 
 #endif

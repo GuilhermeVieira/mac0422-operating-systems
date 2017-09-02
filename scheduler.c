@@ -8,6 +8,11 @@ int main(int argc, char **argv)
     char *file_input = argv[2], *file_output = argv[3];
     if(argc >= 4 && !strcmp("d", argv[4]))
         optional = 1;
+    if (scheduler_type == 1){
 
+    }
+    else{
+        
+    }
     return 0;
 }
