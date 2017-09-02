@@ -22,4 +22,12 @@ void destroyProcess(process *P);
 
 bob *creatBob();
 
+void destroyBob();
+
+void addProcess(bob *Bob, bob *new_process);
+
+
+bob *getListOfProcesses(char *file_input);
+
+
 #endif

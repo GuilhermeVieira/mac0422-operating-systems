@@ -34,3 +34,45 @@ void destroyBob()
     free(bob);
     return;
 }
+
+void addProcess(bob *Bob, process *new_process)
+{
+    int i = 0;
+    if (Bob->max <= Bob->top){
+        Bob->max *= 2;
+        Bob->process_list = erealloc(Bob->process_list, Bob->max)
+    }
+    i = binSearch();
+    for (int k = Bob->top; k >= i; k--)
+        Bob->process_list[k + 1] = Bob->process_list[k];
+    Bob->process_list[i] = new_process;
+    destroyProcess(new_process);
+    Bob->top++;
+    return;
+}
+
+bob *getListOfProcesses(char *file_input)
+{
+    FILE *file;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+    char **parsed_line;
+    bob *BOB = creatBob();
+    process *temp ;
+    file = fopen(file_input, "r");
+    if (file == NULL)
+        exit(EXIT_FAILURE);
+    while ((read = getline(&line, &len, fp)) != -1){
+        parsed_line = parseCommand(line, &len);
+        temp = createProcess(atof(parsed_line[0]), atof(parsed_line[1]), atof(parsed_line[2]), parsed_line[3]);
+        if (BOB->max <= BOB->top){
+            BOB->max *= 2;
+            BOB->process_list = erealloc(BOB->process_list, BOB->max)
+        }
+        BOB->process_list[BOB->top]  = temp;
+        BOB->top++;
+        destroyProcess(temp);
+    }
+    return BOB;
+}
