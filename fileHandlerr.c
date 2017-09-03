@@ -76,3 +76,12 @@ bob *getListOfProcesses(char *file_input)
     }
     return BOB;
 }
+
+void *sjfFunction(, double dt, unsigned double *time)
+{
+    //pthread_mutex_lock(//& o mutex desse processo);
+    nanosleep( (int) dt, (dt - dt/1)*100000000L);
+    *time += dt;
+    //pthread_mutex_unlock(//& o mutex do SJF);
+    return;
+}
