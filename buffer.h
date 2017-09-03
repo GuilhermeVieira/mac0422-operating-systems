@@ -6,6 +6,9 @@
 
 #include <stdio.h> // printf(), fprintf().
 #include <stdlib.h> // EXIT_FAILURE, malloc(), free(), sizeof().
+#include <ctype.h> // isspace().
+#include <string.h> // strncpy().
+
 
 #define BUFFER_MAX 32;
 
@@ -15,6 +18,15 @@ typedef struct {
                 int max; // Tamanho do buffer.
                 int top; // Primeira posição livre.
                 } Buffer;
+
+/* Adiciona a string do Buffer B no vetor de strings parsed_command de tamanho
+* n. */
+char **addToParcomm(char **parsed_command, Buffer *B, int *n);
+
+/* Recebe o comando dado para o shell e um ponteiro para int que irá armazenar
+ * o numero de argumentos. A função separa os argumentos e os armazena em um
+ * vetor de strings que é devolvido para que o comando possa ser executado. */
+char **parseCommand(char *command, int *n);
 
  // Cria Buffer (vetor dinâmico) de char e devolve um ponteiro para Buffer.
 Buffer *createBuffer();

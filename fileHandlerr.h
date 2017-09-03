@@ -1,33 +1,35 @@
-#ifndef __FILEHANDLERR__
-#define __FILEHANDLERR__
+#ifndef __FILEHANDLER_H__
+#define __FILEHANDLER_H__
 
-#define MAXNUMBER 8;
-#define QUANTUM 1;
+#include <stdio.h>  //fopen(), fprintf(), getline()
+#include <string.h> //strcmp()
+#include <stdlib.h> //atof()
+#include "buffer.h"
 
 typedef struct {
                 int priority;
                 double t0, dt, deadline;
                 char *name;
-                } process;
+                } Process;
 
-typedef struct  {
-                process *process_list;
-                int max;
-                int top;
-                } bob;
+typedef struct node {
+                    Process *info;
+                    struct node *next;
+                    } Cell;
 
-process *createProcess(double t0, double dt, double deadline, char *name);
+// Apontador para o ínicio da lista de processos.
+typedef Cell *List;
 
-void destroyProcess(process *P);
+List readFile(char *fileName);
 
-bob *creatBob();
+List createList();
 
-void destroyBob();
+List addList(List root, Process *new_process);
 
-void addProcess(bob *Bob, bob *new_process);
+List removeList(List root, Process *x);
 
+void destroyProcess(Process *x);
 
-bob *getListOfProcesses(char *file_input);
-
+Process *createProcess(double t0, double dt, double dl, char *name);
 
 #endif

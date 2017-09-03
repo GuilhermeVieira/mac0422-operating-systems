@@ -3,6 +3,54 @@
 
 #include "buffer.h"
 
+/* Adiciona a string do Buffer B no vetor de strings parsed_command de tamanho
+ * n. */
+char **addToParcomm(char **parsed_command, Buffer *B, int *n)
+{
+    addToBuffer(B, '\0');
+    // Aloca mais espaço para o vetor parsed_command se necessário.
+    if ((*n)*sizeof(char*) >= sizeof(parsed_command))
+        parsed_command = erealloc (parsed_command, (*n)*2*(sizeof(char *)));
+    // Copia a string do Buffer para parsed_command[*n]
+    parsed_command[*n] = emalloc(B->top*sizeof(char));
+    parsed_command[*n] = strncpy(parsed_command[*n], B->word,
+                                B->top*sizeof(char));
+    (*n)++;
+    clearBuffer(B); // O Buffer deve ser ter seu tamanho "resetado".
+    return parsed_command;
+}
+
+/* Recebe o comando dado para o shell e um ponteiro para int que irá armazenar
+ * o numero de argumentos. A função separa os argumentos e os armazena em um
+ * vetor de strings que é devolvido para que o comando possa ser executado. */
+char **parseCommand(char *command, int *n)
+{
+    char **parsed_command;
+    Buffer *B;
+    *n = 0;
+    B = createBuffer();
+    parsed_command = emalloc(sizeof(char*));
+    // Quebra o comando original em argumentos.
+    for (int i = 0; command[i] != '\0'; i++) {
+        if (isspace(command[i])) // O espaço indica o final de um argumento.
+            parsed_command = addToParcomm(parsed_command, B, n);
+        else
+            addToBuffer(B, command[i]);
+    }
+    // Adiciona o último argumento que ainda não foi adicionado.
+    parsed_command = addToParcomm(parsed_command, B, n);
+    // Aloca mais espaço para o vetor parsed_command se necessário.
+    if ((*n)*sizeof(char*) >= sizeof(parsed_command)) {
+        parsed_command = erealloc(parsed_command, (*n)*2*(sizeof(char *)));
+    }
+    // Coloca um ponteiro para NULL no último comando (requisito p/ execvp()).
+    parsed_command[*n] = '\0';
+    (*n)++;
+    destroyBuffer(B);
+    return parsed_command;
+}
+
+
 Buffer *createBuffer()
 {
     Buffer *B = emalloc(sizeof(Buffer));

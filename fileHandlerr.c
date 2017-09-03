@@ -1,87 +1,80 @@
 #include "fileHandlerr.h"
-#include "buffer.h"
 
-
-process *createProcess(double t0, double dt, double deadline, char *name)
+List readFile(char *fileName)
 {
-    process *new_process = emalloc(sizeof(process));
-    new_process->priority = 0;
+    List processQueue = createList();
+    int *n;
+    FILE *file_pointer;
+    char *line = NULL;
+    char **parsedLine;
+    size_t len = 0;
+    ssize_t read;
+    Process *temp;
+
+    file_pointer = fopen(fileName, "r");
+
+    if (file_pointer == NULL) {
+        fprintf(stderr, "ERRO: Arquivo não encontrado.");
+        exit(EXIT_FAILURE);
+    }
+    while ((read = getline(&line, &len, file_pointer)) != -1) {
+        parsedLine = parseCommand(line, n);
+        if (*n != 4) {
+            fprintf(stderr, "ERRO: Formato das entradas inválido.");
+            exit(EXIT_FAILURE);
+        }
+        temp = createProcess(atof(parsedLine[0]), atof(parsedLine[1]), atof(parsedLine[2]), parsedLine[3]);
+        processQueue = addList(processQueue, temp);
+    }
+    fclose (file_pointer); //
+}
+
+List createList()
+{
+    List root = NULL;
+    return root;
+}
+
+List addList(List root, Process *new_process)
+{
+    if (root == NULL){
+        root = emalloc(sizeof(Cell));
+        root->info = new_process;
+        root->next = NULL;
+        return root;
+    }
+    root->next = addList(root->next, new_process);
+    return root;
+}
+
+List removeList(List root, Process *x)
+{
+    if (root == NULL)
+        return root;
+    if (!strcmp(root->info->name, x->name)){
+       List temp = root->next;
+       destroyProcess(root->info);
+       free(root);
+       return temp;
+    }
+    root->next = removeList(root->next, x);
+    return root;
+}
+
+Process *createProcess(double t0, double dt, double dl, char *name)
+{
+    Process *new_process = emalloc(sizeof(Process));
     new_process->t0 = t0;
     new_process->dt = dt;
-    new_process->deadline= deadline;
+    new_process->deadline = dl;
+    new_process->priority = 0;
     new_process->name = name;
     return new_process;
 }
 
-void destroyProcess(process *P)
+void destroyProcess(Process *x)
 {
-    free(P->name);
-    free(P);
-    return;
-}
-
-bob *creatBob()
-{
-    bob *newBob = emalloc(sizeof(bob));
-    newBob->max = MAXNUMBER;
-    newBob->top = 0;
-    return newBob;
-}
-
-void destroyBob()
-{
-    free(bob->process_list);
-    free(bob);
-    return;
-}
-
-void addProcess(bob *Bob, process *new_process)
-{
-    int i = 0;
-    if (Bob->max <= Bob->top){
-        Bob->max *= 2;
-        Bob->process_list = erealloc(Bob->process_list, Bob->max)
-    }
-    i = binSearch();
-    for (int k = Bob->top; k >= i; k--)
-        Bob->process_list[k + 1] = Bob->process_list[k];
-    Bob->process_list[i] = new_process;
-    destroyProcess(new_process);
-    Bob->top++;
-    return;
-}
-
-bob *getListOfProcesses(char *file_input)
-{
-    FILE *file;
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t read;
-    char **parsed_line;
-    bob *BOB = creatBob();
-    process *temp ;
-    file = fopen(file_input, "r");
-    if (file == NULL)
-        exit(EXIT_FAILURE);
-    while ((read = getline(&line, &len, fp)) != -1){
-        parsed_line = parseCommand(line, &len);
-        temp = createProcess(atof(parsed_line[0]), atof(parsed_line[1]), atof(parsed_line[2]), parsed_line[3]);
-        if (BOB->max <= BOB->top){
-            BOB->max *= 2;
-            BOB->process_list = erealloc(BOB->process_list, BOB->max)
-        }
-        BOB->process_list[BOB->top]  = temp;
-        BOB->top++;
-        destroyProcess(temp);
-    }
-    return BOB;
-}
-
-void *sjfFunction(, double dt, unsigned double *time)
-{
-    //pthread_mutex_lock(//& o mutex desse processo);
-    nanosleep( (int) dt, (dt - dt/1)*100000000L);
-    *time += dt;
-    //pthread_mutex_unlock(//& o mutex do SJF);
+    free(x->name);
+    free(x);
     return;
 }
