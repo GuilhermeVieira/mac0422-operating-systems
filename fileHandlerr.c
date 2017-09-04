@@ -7,6 +7,14 @@ int cmpfunc(const void *a, const void *b)
     return 1;
 }
 
+void writeFile(char *outputFile, Process *proc, double time){
+    FILE *fp;
+    fp = fopen(outputFile, "a");
+    fprintf(fp, "%s %f %f\n", proc->name, time, time - proc->t0);
+    fclose(fp);
+    return;
+}
+
 List readFile(char *fileName)
 {
     List processQueue = createList();

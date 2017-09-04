@@ -22,6 +22,8 @@ typedef Cell *List;
 
 int cmpfunc(const void *a, const void *b);
 
+void writeFile(char *outputFile, Process *proc, double time);
+
 List readFile(char *fileName);
 
 List createList();

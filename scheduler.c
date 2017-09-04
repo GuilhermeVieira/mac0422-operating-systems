@@ -17,10 +17,10 @@ void nap(double dt)
     return;
 }
 
-void simulateProcSJF(void *toSchedule)
+void *simulateProcSJF(void *toSchedule)
 {
     nap(((List)toSchedule)->info->dt);
-    return;
+    return NULL;
 }
 
 void SJF(char *inputFile, char *outputFile, int optional)
@@ -45,6 +45,7 @@ void SJF(char *inputFile, char *outputFile, int optional)
         printf("/////////\n");
         for(List temp = toArrive ;temp != NULL; temp = temp->next)
             printf("%s\n", temp->info->name);
+        writeFile(outputFile, toSchedule->info, time);
         toSchedule = removeList(toSchedule, toSchedule->info);
     }
     return;
