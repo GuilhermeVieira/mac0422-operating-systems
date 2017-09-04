@@ -20,6 +20,8 @@ typedef struct node {
 // Apontador para o ínicio da lista de processos.
 typedef Cell *List;
 
+int cmpfunc(const void *a, const void *b);
+
 List readFile(char *fileName);
 
 List createList();

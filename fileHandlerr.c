@@ -1,15 +1,23 @@
 #include "fileHandlerr.h"
 
+int cmpfunc(const void *a, const void *b)
+{
+    if ((*(Process*) a).t0 < (*(Process*) b).t0) return -1;
+    else if ((*(Process*) a).t0 ==  (*(Process*) b).t0) return 0;
+    return 1;
+}
+
 List readFile(char *fileName)
 {
     List processQueue = createList();
-    int n;
+    int n, size = 1, i= 0, j = 0;
     FILE *file_pointer;
     char *line = NULL;
     char **parsedLine;
     size_t len = 0;
     ssize_t read;
     Process *temp;
+    Process *array = emalloc(sizeof(Process));    
     file_pointer = fopen(fileName, "r");
 
     if (file_pointer == NULL) {
@@ -21,8 +29,21 @@ List readFile(char *fileName)
         if(parsedLine[0][0] == '\0')
             continue;
         temp = createProcess(atof(parsedLine[0]), atof(parsedLine[1]), atof(parsedLine[2]), parsedLine[3]);
-        processQueue = addList(processQueue, temp);
+        if (i >= size){ 
+            size *= 2;    
+            array = erealloc(array, size*sizeof(Process));
+        }        
+        array[i] = *temp;    
+        i++;
     }
+
+    qsort(array, i, sizeof(Process), cmpfunc);
+    
+    while (j < i) {
+        processQueue = addList(processQueue, &array[j]);
+        j++;
+    }
+      
     fclose (file_pointer);
     return processQueue;
 }
