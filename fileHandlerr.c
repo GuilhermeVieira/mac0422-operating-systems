@@ -76,3 +76,28 @@ void destroyProcess(Process *x)
     free(x);
     return;
 }
+
+List add(List toSchedule, List *toArrive, double time)
+{
+    List *temp, *head, tail;
+    head = toArrive;
+    for (; *toArrive != NULL && (*toArrive)->info->t0 <= time; temp = toArrive, *toArrive = (*toArrive)->next){} //acha onde corta
+    if ((*head) != NULL && (*head)->info->t0 <= time){ //ve se precisa cortar
+        tail = getTail(toSchedule);  //ver se é null
+        tail = *head;
+        (*temp)->next = NULL; //cortar a ligação de toSchedule com toArrive
+    }
+    return toSchedule;
+}
+//my god!!!!!!!!!!
+//isso ta fudendo!!!!!!
+List getTail(List head)
+{
+    List tail = NULL, temp = head;
+    while (temp != NULL) {
+        tail = temp;
+        temp = temp->next;
+    }
+    printf("olllllaaaa %d %d\n", temp == head, temp == NULL);
+    return tail;
+}

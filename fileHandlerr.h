@@ -32,4 +32,9 @@ void destroyProcess(Process *x);
 
 Process *createProcess(double t0, double dt, double dl, char *name);
 
+List add(List bob, List *bob2, double time);//
+
+List getTail(List head);
+
+
 #endif
