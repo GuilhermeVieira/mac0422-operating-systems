@@ -17,9 +17,8 @@ List readFile(char *fileName)
     size_t len = 0;
     ssize_t read;
     Process *temp;
-    Process *array = emalloc(sizeof(Process));    
+    Process *array = emalloc(sizeof(Process));
     file_pointer = fopen(fileName, "r");
-
     if (file_pointer == NULL) {
         fprintf(stderr, "ERRO: Arquivo não encontrado.");
         exit(EXIT_FAILURE);
@@ -29,21 +28,18 @@ List readFile(char *fileName)
         if(parsedLine[0][0] == '\0')
             continue;
         temp = createProcess(atof(parsedLine[0]), atof(parsedLine[1]), atof(parsedLine[2]), parsedLine[3]);
-        if (i >= size){ 
-            size *= 2;    
+        if (i >= size){
+            size *= 2;
             array = erealloc(array, size*sizeof(Process));
-        }        
-        array[i] = *temp;    
+        }
+        array[i] = *temp;
         i++;
     }
-
     qsort(array, i, sizeof(Process), cmpfunc);
-    
     while (j < i) {
         processQueue = addList(processQueue, &array[j]);
         j++;
     }
-      
     fclose (file_pointer);
     return processQueue;
 }
@@ -72,7 +68,7 @@ List removeList(List root, Process *x)
         return root;
     if (!strcmp(root->info->name, x->name)){
        List temp = root->next;
-       destroyProcess(root->info);
+       //destroyProcess(root->info); //bugada;
        free(root);
        return temp;
     }
@@ -94,7 +90,7 @@ Process *createProcess(double t0, double dt, double dl, char *name)
 void destroyProcess(Process *x)
 {
     free(x->name);
-    free(x);
+    //free(x); isso que esta bugado
     return;
 }
 
