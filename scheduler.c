@@ -3,9 +3,9 @@
 #include <time.h>  //nanosleep()
 #include <unistd.h> //sleep()
 #include <pthread.h>
-
 #include "fileHandlerr.h"
 
+#define QUANTUM 1.5;
 
 void nap(double dt)
 {
@@ -40,13 +40,61 @@ void SJF(char *inputFile, char *outputFile, int optional)
         pthread_create(&thread, NULL, &simulateProcSJF, (void *)toSchedule);
         time += toSchedule->info->dt;
         pthread_join(thread, NULL);
-        for(List temp = toSchedule ;temp != NULL; temp = temp->next)
-            printf("%s\n", temp->info->name);
-        printf("/////////\n");
-        for(List temp = toArrive ;temp != NULL; temp = temp->next)
-            printf("%s\n", temp->info->name);
         writeFile(outputFile, toSchedule->info, time);
         toSchedule = removeList(toSchedule, toSchedule->info);
+    }
+    return;
+}
+
+void *simulateProcRR(Process *proc){
+    while (proc->dt != proc->run_time){
+        pthread_mutex_lock(&(proc->mutex));
+        if (proc->dt - proc->run_time >= QUANTUM){
+            nap(QUANTUM);
+            proc->run_time += QUANTUM
+        }
+        else{
+            nap(proc->dt - proc->run_time);
+            proc->run_time += proc->dt - proc->run_time; //mesma coisa de fazer proc->run_time = proc->dt;
+        }
+        pthread_mutex_unlock(&mutex);
+    }
+    return NULL;
+}
+
+void roundRobin(char *inputFile, char *outputFile)
+{
+    pthread_mutex_t mutex;
+    List toArrive, toSchedule = NULL;
+    List currProcess = NULL;
+    double time = 0;
+    toArrive = readFile(inputFile);
+    pthread_mutex_init(&mutex, NULL);
+    while(toSchedule != NULL || toArrive != NULL){
+        toSchedule = add(toSchedule, &toArrive, time);
+        if (toSchedule == NULL){
+            nap(0.5);
+            time += 0.5;
+            pthread_mutex_unlock(&mutex);  //num sei se isso ta certo de estar aqui;
+            continue;
+        }
+        if (currProcess == NULL)
+           currProcess = toSchedule;
+        //ver se ela já rodou, se não iniciar farol;
+        if (currProcess->info->run_time == 0){
+            pthread_mutex_init(&(currProcess->info->mutex), NULL);
+            pthread_create(&(currProcess->info->thread), NULL, &simulateProcRR, currProcess->info);
+        }
+        else
+            pthread_mutex_unlock(&(currProcess->info->mutex));
+        pthread_mutex_lock(&mutex);   //num sei onde colocar isso;
+        if (currProcess->info->run_time >= currProcess->info->dt){
+            writeFile(outputFile, toSchedule->info, time);
+            pthread_mutex_destroy(&(currProcess->info->mutex));
+            pthread_cancel(currProcess->info->thread);
+            toSchedule = removeList(toSchedule, toSchedule->info); //isso não parece certo não
+        }
+        currProcess = currProcess->next;
     }
     return;
 }

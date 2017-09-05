@@ -91,6 +91,7 @@ Process *createProcess(double t0, double dt, double dl, char *name)
     new_process->dt = dt;
     new_process->deadline = dl;
     new_process->priority = 0;
+    new_process->run_time = 0.0;
     new_process->name = name;
     return new_process;
 }

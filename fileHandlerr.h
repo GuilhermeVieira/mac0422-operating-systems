@@ -8,8 +8,10 @@
 
 typedef struct {
                 int priority;
-                double t0, dt, deadline;
+                double t0, dt, deadline, run_time;
                 char *name;
+                pthread_mutex_t mutex;
+                pthread_t thread; 
                 } Process;
 
 typedef struct node {
