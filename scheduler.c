@@ -6,7 +6,7 @@
 #include <math.h> //pow()
 #include "fileHandlerr.h"
 
-#define QUANTUM 1.5
+#define QUANTUM 0.5
 #define NAP_TIME 0.5
 
 pthread_mutex_t mutex;
@@ -29,10 +29,20 @@ void *simulateProcSJF(void *toSchedule)
     return NULL;
 }
 
+List getNextShortest(List root)
+{
+    List shortest = root;
+    for (;root != NULL; root = root->next){
+        if (shortest->info->dt > root->info->dt)
+            shortest = root;
+    }
+    return shortest;
+}
+
 void SJF(char *inputFile, char *outputFile, int optional)
 {
     pthread_t thread;
-    List toArrive, toSchedule = NULL;
+    List toArrive, shortest, toSchedule = NULL;
     double temp;
     toArrive = readFile(inputFile);
     while((toSchedule != NULL || toArrive != NULL)){
@@ -42,10 +52,12 @@ void SJF(char *inputFile, char *outputFile, int optional)
             nap(1);
             continue;
         }
-        pthread_create(&thread, NULL, &simulateProcSJF, (void *)toSchedule);
+        shortest = getNextShortest(toSchedule);
+        pthread_create(&thread, NULL, &simulateProcSJF, (void *)shortest);
         pthread_join(thread, NULL);
-        writeFile(outputFile, toSchedule->info, clock_time);
-        toSchedule = removeList(toSchedule, toSchedule->info);
+        fprintf(stderr, "O processo %s deixou de usar a CPU %d", shortest->info->name, 1);  //tem mais coisa pra mudar aqui CUIDADO!!!!!
+        writeFile(outputFile, shortest->info, clock_time);
+        toSchedule = removeList(toSchedule, shortest->info);
     }
     return;
 }
@@ -93,7 +105,7 @@ void *simulateProcPRR(void *proc){
         printf("PRIORIDADE %d\n", priority);
         if (procc->dt - procc->run_time >= QUANTUM*priority){
             nap(QUANTUM*priority);
-            procc->run_time += QUANTUM;
+            procc->run_time += QUANTUM*priority;
         }
         else{
             nap(procc->dt - procc->run_time);
@@ -130,6 +142,10 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
         else
             pthread_mutex_unlock(&(currProcess->info->mutex));
         pthread_mutex_lock(&mutex);   //num sei onde colocar isso;
+        
+        if (optional == 1)
+            fprintf(stderr, "O processo %s deixou de usar a CPU %d", currProcess->info->name, 1); //mudei essa linha
+
         if (currProcess->info->run_time >= currProcess->info->dt){
             writeFile(outputFile, currProcess->info, clock_time);
             pthread_mutex_destroy(&(currProcess->info->mutex));

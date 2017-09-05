@@ -11,6 +11,9 @@ void writeFile(char *outputFile, Process *proc, double time){
     FILE *fp;
     fp = fopen(outputFile, "a");
     fprintf(fp, "%s %f %f\n", proc->name, time, time - proc->t0);
+    if (optional == 1)    
+        fprintf(stderr, "O processo %s foi finalizado e esta sendo escrito na linha %d", proc->name, /*número da linha*/); //mudei, falta achar a linha    
+
     fclose(fp);
     return;
 }
@@ -109,7 +112,10 @@ List add(List toSchedule, List *toArrive, double time)
     head = emalloc(sizeof(List));
     temp = emalloc(sizeof(List));
     *head = *toArrive;
-    for (; *toArrive != NULL && (*toArrive)->info->t0 <= time; *temp = *toArrive, *toArrive = (*toArrive)->next){}
+    for (; *toArrive != NULL && (*toArrive)->info->t0 <= time; *temp = *toArrive, *toArrive = (*toArrive)->next)
+        if (optional == 1)                                                        //adicionei esse if
+            fprintf(stderr, "o processo %s presente na linha %d do arquivo de trace chegou ao sistema", (*toArrive)->info->name, /*alguma coisa com a linha de arquivo*/);
+    
     if (*head != *toArrive && (*head)->info->t0 <= time){
         tail = getTail(toSchedule);
         if (tail == NULL)
