@@ -3,6 +3,7 @@
 #include <time.h>  //nanosleep()
 #include <unistd.h> //sleep()
 #include <pthread.h> 
+#include <math.h> //pow()
 #include "fileHandlerr.h"
 
 #define QUANTUM 1.5
@@ -67,7 +68,43 @@ void *simulateProcRR(void *proc){
     return NULL;
 }
 
-void roundRobin(char *inputFile, char *outputFile, int optional)
+int calcPriority(Process *proc)
+{
+	/*
+	printf("CLOCKTIME %f\n", clock_time);
+	printf("proc->deadline %f\n", proc->deadline);
+	printf("proc->dt %f\n", proc->dt);
+	*/
+    double priority = -pow(((clock_time - proc->deadline)/proc->dt), 2) + 10;
+    if (priority > 1) {
+    	if ((int)(priority + 1) < 5 && clock_time > proc->deadline) return 5;
+    	return (int)(priority + 1); 
+    }
+    return 1;
+}
+
+void *simulateProcPRR(void *proc){
+	int priority;
+    Process *procc = (Process *)proc;
+    while (procc->dt != procc->run_time){
+        pthread_mutex_lock(&(procc->mutex));
+        printf("estou rodando o processo %s\n", procc->name);
+        priority = calcPriority(procc);
+        printf("PRIORIDADE %d\n", priority);
+        if (procc->dt - procc->run_time >= QUANTUM*priority){
+            nap(QUANTUM*priority);
+            procc->run_time += QUANTUM;
+        }
+        else{
+            nap(procc->dt - procc->run_time);
+            procc->run_time += procc->dt - procc->run_time; //mesma coisa de fazer proc->run_time = proc->dt;
+        }
+        pthread_mutex_unlock(&mutex);
+    }
+    return NULL;
+}
+
+void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_type)
 {
     List toArrive, toSchedule = NULL;
     List currProcess = NULL;
@@ -85,7 +122,10 @@ void roundRobin(char *inputFile, char *outputFile, int optional)
         //ver se ela já rodou, se não iniciar farol;
         if (currProcess->info->run_time == 0){
             pthread_mutex_init(&(currProcess->info->mutex), NULL);
-            pthread_create(&(currProcess->info->thread), NULL, &simulateProcRR, currProcess->info);
+            if (scheduler_type == 2)
+                pthread_create(&(currProcess->info->thread), NULL, &simulateProcRR, currProcess->info);
+            else
+                pthread_create(&(currProcess->info->thread), NULL, &simulateProcPRR, currProcess->info);
         }
         else
             pthread_mutex_unlock(&(currProcess->info->mutex));
@@ -114,7 +154,7 @@ int main(int argc, char **argv)
         optional = 1;
     if (scheduler_type == 1)
         SJF(inputFile, outputFile, optional);
-    else if (scheduler_type == 2)
-        roundRobin(inputFile, outputFile, optional);
+    else 
+        roundRobin(inputFile, outputFile, optional, scheduler_type);
     return 0;
 }

@@ -1,56 +1,13 @@
-#define QUANTUM 1.5;
-// colocar ptr p/ farol no processo PENDENTE/IDEIA
-
-void roundRobin(char *inputFile, char *outputFile)
-{
-    List toArrive, toSchedule = NULL;
-    List currProcess = NULL;    
-    double time = 0;
-    toArrive = readFile(inputFile);
-    while(toSchedule != NULL || toArrive != NULL){
-        P(farol0);
-        toSchedule = add(toSchedule, &toArrive, time);
-        if (toSchedule == NULL){
-            nanosleep(0.5segundos);    
-            time += 0.5;
-            V(farol0);
-            continue;
-        }
-        if (currProcess == NULL)
-           currProcess = toSchedule; 
-        //ver se ela já rodou, se não iniciar farol;
-        if (currProcess->info->run_time == 0){
-            pthread_mutex_init();
-            pthread_create();
-        }
-        else 
-            pthread_mutex_unlock(&(currProcess->info->mutex));
-        if (currProcess->info->run_time >= currProcess->info->dt){
-            writeFile(outputFile, toSchedule->info, time);
-        toSchedule = removeList(toSchedule, toSchedule->info);
-        }
-        currProcess = currProcess->next;        
-    }
-    return;
-}
-
-thread -> farol 
+QUANTUM 0.5
+prioridade -> int [1, 10[
 
 
-
-void *simulateProcRR(Process *proc){    
-    while(timer até acabar dt){
-        pthread_mutex_lock(&(proc->mutex));
-        nanosleep(?);
-        timer += QUANTUM // ou quanto tempo resta se for menor que quantum 
-        V(farol0); 
-    }    
-    return NULL;
-}
-
-typedef struct {
-                int priority;
-                double t0, dt, run_time, deadline;
-                pthread_mutex_t mutex; //Não posso simplesmente fazer isso?
-                char *name;
-                } Process;
+ prioridade =  (int) (-(x/dt)^2 + 10) > 1 else 1;
+ 
+ if ((int) (-(x/dt)^2 + 10) > 1){
+     prioridade =  (int) (-(x/dt)^2 + 10) + 1
+ } 
+ else 
+     prioriade = 1;
+     
+QUANTUM * prioridade;
