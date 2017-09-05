@@ -76,7 +76,7 @@ List removeList(List root, Process *x)
         return root;
     if (!strcmp(root->info->name, x->name)){
        List temp = root->next;
-       //destroyProcess(root->info); //bugada;
+       destroyProcess(root->info); //bugada;
        free(root);
        return temp;
     }

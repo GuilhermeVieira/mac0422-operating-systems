@@ -2,12 +2,14 @@
 #include <stdlib.h> //atoi()
 #include <time.h>  //nanosleep()
 #include <unistd.h> //sleep()
-#include <pthread.h>
+#include <pthread.h> 
 #include "fileHandlerr.h"
 
 #define QUANTUM 1.5
+#define NAP_TIME 0.5
 
 pthread_mutex_t mutex;
+double clock_time = 0;
 
 void nap(double dt)
 {
@@ -16,6 +18,7 @@ void nap(double dt)
     temp = dt - temp2;
     temp *= 10;
     nanosleep((const struct timespec[]){{temp2, temp*100000000L}}, NULL);
+    clock_time += dt;
     return;
 }
 
@@ -29,20 +32,18 @@ void SJF(char *inputFile, char *outputFile, int optional)
 {
     pthread_t thread;
     List toArrive, toSchedule = NULL;
-    double time = 0, temp;
+    double temp;
     toArrive = readFile(inputFile);
     while((toSchedule != NULL || toArrive != NULL)){
-        toSchedule = add(toSchedule, &toArrive, time);
-        printf("%f\n", time);
-        time++;
+        toSchedule = add(toSchedule, &toArrive, clock_time);
+        printf("%f\n", clock_time);
         if (toSchedule == NULL){
-            sleep(1);
+            nap(1);
             continue;
         }
         pthread_create(&thread, NULL, &simulateProcSJF, (void *)toSchedule);
-        time += toSchedule->info->dt;
         pthread_join(thread, NULL);
-        writeFile(outputFile, toSchedule->info, time);
+        writeFile(outputFile, toSchedule->info, clock_time);
         toSchedule = removeList(toSchedule, toSchedule->info);
     }
     return;
@@ -70,18 +71,16 @@ void roundRobin(char *inputFile, char *outputFile, int optional)
 {
     List toArrive, toSchedule = NULL;
     List currProcess = NULL;
-    double time = 0;
     toArrive = readFile(inputFile);
     pthread_mutex_init(&mutex, NULL);
     while(toSchedule != NULL || toArrive != NULL){
-        toSchedule = add(toSchedule, &toArrive, time);
+        toSchedule = add(toSchedule, &toArrive, clock_time);
         if (toSchedule == NULL){
-            nap(0.5);
-            time += 0.5;
+            nap(NAP_TIME);
             //pthread_mutex_unlock(&mutex);  //num sei se isso ta certo de estar aqui;
             continue;
         }
-        if (currProcess == NULL)
+        if (currProcess == NULL) // Faz a lista ser circular
            currProcess = toSchedule;
         //ver se ela já rodou, se não iniciar farol;
         if (currProcess->info->run_time == 0){
@@ -91,12 +90,14 @@ void roundRobin(char *inputFile, char *outputFile, int optional)
         else
             pthread_mutex_unlock(&(currProcess->info->mutex));
         pthread_mutex_lock(&mutex);   //num sei onde colocar isso;
-        time += QUANTUM;
         if (currProcess->info->run_time >= currProcess->info->dt){
-            writeFile(outputFile, toSchedule->info, time);
+            writeFile(outputFile, currProcess->info, clock_time);
             pthread_mutex_destroy(&(currProcess->info->mutex));
             pthread_cancel(currProcess->info->thread);
-            toSchedule = removeList(toSchedule, currProcess->info); //isso não parece certo não
+            List temp = currProcess->next;
+            toSchedule = removeList(toSchedule, currProcess->info); 
+            currProcess = temp;
+            continue;
         }
         currProcess = currProcess->next;
     }
