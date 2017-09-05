@@ -5,7 +5,9 @@
 #include <pthread.h>
 #include "fileHandlerr.h"
 
-#define QUANTUM 1.5;
+#define QUANTUM 1.5
+
+pthread_mutex_t mutex;
 
 void nap(double dt)
 {
@@ -46,25 +48,26 @@ void SJF(char *inputFile, char *outputFile, int optional)
     return;
 }
 
-void *simulateProcRR(Process *proc){
-    while (proc->dt != proc->run_time){
-        pthread_mutex_lock(&(proc->mutex));
-        if (proc->dt - proc->run_time >= QUANTUM){
+void *simulateProcRR(void *proc){
+    Process *procc = (Process *)proc;
+    while (procc->dt != procc->run_time){
+        pthread_mutex_lock(&(procc->mutex));
+        printf("estou rodando o processo %s\n", procc->name);
+        if (procc->dt - procc->run_time >= QUANTUM){
             nap(QUANTUM);
-            proc->run_time += QUANTUM
+            procc->run_time += QUANTUM;
         }
         else{
-            nap(proc->dt - proc->run_time);
-            proc->run_time += proc->dt - proc->run_time; //mesma coisa de fazer proc->run_time = proc->dt;
+            nap(procc->dt - procc->run_time);
+            procc->run_time += procc->dt - procc->run_time; //mesma coisa de fazer proc->run_time = proc->dt;
         }
         pthread_mutex_unlock(&mutex);
     }
     return NULL;
 }
 
-void roundRobin(char *inputFile, char *outputFile)
+void roundRobin(char *inputFile, char *outputFile, int optional)
 {
-    pthread_mutex_t mutex;
     List toArrive, toSchedule = NULL;
     List currProcess = NULL;
     double time = 0;
@@ -75,7 +78,7 @@ void roundRobin(char *inputFile, char *outputFile)
         if (toSchedule == NULL){
             nap(0.5);
             time += 0.5;
-            pthread_mutex_unlock(&mutex);  //num sei se isso ta certo de estar aqui;
+            //pthread_mutex_unlock(&mutex);  //num sei se isso ta certo de estar aqui;
             continue;
         }
         if (currProcess == NULL)
@@ -88,11 +91,12 @@ void roundRobin(char *inputFile, char *outputFile)
         else
             pthread_mutex_unlock(&(currProcess->info->mutex));
         pthread_mutex_lock(&mutex);   //num sei onde colocar isso;
+        time += QUANTUM;
         if (currProcess->info->run_time >= currProcess->info->dt){
             writeFile(outputFile, toSchedule->info, time);
             pthread_mutex_destroy(&(currProcess->info->mutex));
             pthread_cancel(currProcess->info->thread);
-            toSchedule = removeList(toSchedule, toSchedule->info); //isso não parece certo não
+            toSchedule = removeList(toSchedule, currProcess->info); //isso não parece certo não
         }
         currProcess = currProcess->next;
     }
@@ -107,6 +111,9 @@ int main(int argc, char **argv)
     outputFile = argv[3];
     if (argc >= 4 && strcmp("d", argv[4]))
         optional = 1;
-    SJF(inputFile, outputFile, optional);
+    if (scheduler_type == 1)
+        SJF(inputFile, outputFile, optional);
+    else if (scheduler_type == 2)
+        roundRobin(inputFile, outputFile, optional);
     return 0;
 }
