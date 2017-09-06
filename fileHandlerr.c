@@ -1,5 +1,7 @@
 #include "fileHandlerr.h"
 
+int output_line = 1;
+
 int cmpfunc(const void *a, const void *b)
 {
     if ((*(Process*) a).t0 < (*(Process*) b).t0) return -1;
@@ -7,13 +9,13 @@ int cmpfunc(const void *a, const void *b)
     return 1;
 }
 
-void writeFile(char *outputFile, Process *proc, double time){
+void writeFile(char *outputFile, Process *proc, double time, int optional){
     FILE *fp;
     fp = fopen(outputFile, "a");
     fprintf(fp, "%s %f %f\n", proc->name, time, time - proc->t0);
     if (optional == 1)    
-        fprintf(stderr, "O processo %s foi finalizado e esta sendo escrito na linha %d", proc->name, /*número da linha*/); //mudei, falta achar a linha    
-
+        fprintf(stderr, "O processo %s foi finalizado e esta sendo escrito na linha %d", proc->name, output_line);    
+    output_line++;
     fclose(fp);
     return;
 }
@@ -38,7 +40,7 @@ List readFile(char *fileName)
         parsedLine = parseCommand(line, &n);
         if(parsedLine[0][0] == '\0')
             continue;
-        temp = createProcess(atof(parsedLine[0]), atof(parsedLine[1]), atof(parsedLine[2]), parsedLine[3]);
+        temp = createProcess(atof(parsedLine[0]), atof(parsedLine[1]), atof(parsedLine[2]), parsedLine[3], i);
         if (i >= size){
             size *= 2;
             array = erealloc(array, size*sizeof(Process));
@@ -87,13 +89,13 @@ List removeList(List root, Process *x)
     return root;
 }
 
-Process *createProcess(double t0, double dt, double dl, char *name)
+Process *createProcess(double t0, double dt, double dl, char *name, int line)
 {
     Process *new_process = emalloc(sizeof(Process));
     new_process->t0 = t0;
     new_process->dt = dt;
     new_process->deadline = dl;
-    new_process->priority = 0;
+    new_process->line = line;
     new_process->run_time = 0.0;
     new_process->name = name;
     return new_process;
@@ -106,7 +108,7 @@ void destroyProcess(Process *x)
     return;
 }
 
-List add(List toSchedule, List *toArrive, double time)
+List add(List toSchedule, List *toArrive, double time, int optional)
 {
     List *temp, *head, tail;
     head = emalloc(sizeof(List));
@@ -114,7 +116,7 @@ List add(List toSchedule, List *toArrive, double time)
     *head = *toArrive;
     for (; *toArrive != NULL && (*toArrive)->info->t0 <= time; *temp = *toArrive, *toArrive = (*toArrive)->next)
         if (optional == 1)                                                        //adicionei esse if
-            fprintf(stderr, "o processo %s presente na linha %d do arquivo de trace chegou ao sistema", (*toArrive)->info->name, /*alguma coisa com a linha de arquivo*/);
+            fprintf(stderr, "o processo %s presente na linha %d do arquivo de trace chegou ao sistema", (*toArrive)->info->name, (*toArrive)->info->line);
     
     if (*head != *toArrive && (*head)->info->t0 <= time){
         tail = getTail(toSchedule);

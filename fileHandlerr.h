@@ -7,7 +7,7 @@
 #include "buffer.h"
 
 typedef struct {
-                int priority;
+                int line; // Linha do arquivo trace
                 double t0, dt, deadline, run_time;
                 char *name;
                 pthread_mutex_t mutex;
@@ -24,7 +24,7 @@ typedef Cell *List;
 
 int cmpfunc(const void *a, const void *b);
 
-void writeFile(char *outputFile, Process *proc, double time);
+void writeFile(char *outputFile, Process *proc, double time, int optional);
 
 List readFile(char *fileName);
 
@@ -36,9 +36,9 @@ List removeList(List root, Process *x);
 
 void destroyProcess(Process *x);
 
-Process *createProcess(double t0, double dt, double dl, char *name);
+Process *createProcess(double t0, double dt, double dl, char *name, int line);
 
-List add(List bob, List *bob2, double time);//
+List add(List bob, List *bob2, double time, int optional);//
 
 List getTail(List head);
 
