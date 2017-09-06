@@ -13,8 +13,8 @@ void writeFile(char *outputFile, Process *proc, double time, int optional){
     FILE *fp;
     fp = fopen(outputFile, "a");
     fprintf(fp, "%s %f %f\n", proc->name, time, time - proc->t0);
-    if (optional == 1)    
-        fprintf(stderr, "O processo %s foi finalizado e esta sendo escrito na linha %d", proc->name, output_line);    
+    if (optional == 1)
+        fprintf(stderr, "O processo %s foi finalizado e esta sendo escrito na linha %d\n", proc->name, output_line);
     output_line++;
     fclose(fp);
     return;
@@ -33,7 +33,7 @@ List readFile(char *fileName)
     Process *array = emalloc(sizeof(Process));
     file_pointer = fopen(fileName, "r");
     if (file_pointer == NULL) {
-        fprintf(stderr, "ERRO: Arquivo não encontrado.");
+        fprintf(stderr, "ERRO: Arquivo não encontrado.\n");
         exit(EXIT_FAILURE);
     }
     while ((read = getline(&line, &len, file_pointer)) != -1) {
@@ -115,9 +115,8 @@ List add(List toSchedule, List *toArrive, double time, int optional)
     temp = emalloc(sizeof(List));
     *head = *toArrive;
     for (; *toArrive != NULL && (*toArrive)->info->t0 <= time; *temp = *toArrive, *toArrive = (*toArrive)->next)
-        if (optional == 1)                                                        //adicionei esse if
-            fprintf(stderr, "o processo %s presente na linha %d do arquivo de trace chegou ao sistema", (*toArrive)->info->name, (*toArrive)->info->line);
-    
+        if (optional == 1)                                                      
+            fprintf(stderr, "o processo %s presente na linha %d do arquivo de trace chegou ao sistema\n", (*toArrive)->info->name, (*toArrive)->info->line);
     if (*head != *toArrive && (*head)->info->t0 <= time){
         tail = getTail(toSchedule);
         if (tail == NULL)
