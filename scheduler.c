@@ -48,6 +48,7 @@ void SJF(char *inputFile, char *outputFile, int optional)
     double temp;
     toArrive = readFile(inputFile);
     while((toSchedule != NULL || toArrive != NULL)){
+        clock_t begin = clock();
         toSchedule = add(toSchedule, &toArrive, clock_time, optional);
         printf("%f\n", clock_time);
         if (toSchedule == NULL){
@@ -57,8 +58,12 @@ void SJF(char *inputFile, char *outputFile, int optional)
         shortest = getNextShortest(toSchedule);
         if (optional == 1)
             fprintf(stderr, "O processo %s começou usar a CPU %d\n", shortest->info->name, 1);
+        clock_t end = clock();
+        double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        clock_time += time_spent;
         pthread_create(&thread, NULL, &simulateProcSJF, (void *)shortest);
         pthread_join(thread, NULL);
+        begin = clock();
         if (optional == 1)
             fprintf(stderr, "O processo %s deixou de usar a CPU %d\n", shortest->info->name, 1);
         cs_counter++;
@@ -66,6 +71,9 @@ void SJF(char *inputFile, char *outputFile, int optional)
             fprintf(stderr, "Mudança de contexto %d\n", cs_counter);
         writeFile(outputFile, shortest->info, clock_time, optional);
         toSchedule = removeList(toSchedule, shortest->info);
+        end = clock();
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        clock_time += time_spent;
     }
     return;
 }
@@ -126,6 +134,7 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
     toArrive = readFile(inputFile);
     pthread_mutex_init(&mutex, NULL);
     while(toSchedule != NULL || toArrive != NULL){
+        clock_t begin = clock();
         toSchedule = add(toSchedule, &toArrive, clock_time, optional);
         if (toSchedule == NULL){
             nap(NAP_TIME);
@@ -134,6 +143,9 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
         if (currProcess == NULL) // Faz a lista ser circular
            currProcess = toSchedule;
         //ver se ela já rodou, se não iniciar farol;
+        clock_t end = clock();
+        double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        clock_time += time_spent;
         if (currProcess->info->run_time == 0){
             pthread_mutex_init(&(currProcess->info->mutex), NULL);
             if (optional == 1)
@@ -149,10 +161,11 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
             pthread_mutex_unlock(&(currProcess->info->mutex));
         }
         pthread_mutex_lock(&mutex);
+        begin = clock();
         cs_counter++;
         if (optional == 1){
-            fprintf(stderr, "O processo %s deixou de usar a CPU %d", currProcess->info->name, 1);
-            fprintf(stderr, "Mudança de contexto %d", cs_counter);
+            fprintf(stderr, "O processo %s deixou de usar a CPU %d\n", currProcess->info->name, 1);
+            fprintf(stderr, "Mudança de contexto %d\n", cs_counter);
         }
         if (currProcess->info->run_time >= currProcess->info->dt){
             writeFile(outputFile, currProcess->info, clock_time, optional);
@@ -164,6 +177,9 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
             continue;
         }
         currProcess = currProcess->next;
+        end = clock();
+        time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+        clock_time += time_spent;
     }
     return;
 }
