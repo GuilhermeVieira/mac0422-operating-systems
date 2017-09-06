@@ -1,10 +1,13 @@
+// Guilherme Costa Vieira               Nº USP: 9790930
+// Victor Chiaradia Gramuglia Araujo    Nº USP: 9793756
+
 #include <string.h> //strcmp()
 #include <stdlib.h> //atoi()
 #include <time.h>  //nanosleep()
 #include <unistd.h> //sleep()
 #include <pthread.h>
 #include <math.h> //pow()
-#include "fileHandlerr.h"
+#include "fileHandler.h"
 
 #define QUANTUM 0.5
 #define NAP_TIME 0.5
@@ -42,10 +45,8 @@ List getNextShortest(List root)
 
 void SJF(char *inputFile, char *outputFile, int optional)
 {
-    printf("%d\n", optional);
     pthread_t thread;
     List toArrive, shortest, toSchedule = NULL;
-    double temp;
     toArrive = readFile(inputFile);
     while((toSchedule != NULL || toArrive != NULL)){
         clock_t begin = clock();
