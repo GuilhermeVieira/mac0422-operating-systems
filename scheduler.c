@@ -7,6 +7,7 @@
 #include <unistd.h> //sleep().
 #include <pthread.h> //pthreads.
 #include <math.h> //pow().
+#include <error.h>
 #include "fileHandler.h"
 
 #define QUANTUM 0.5
@@ -138,9 +139,11 @@ int calcPriority(Process *proc)
 void *simulateProcPRR(void *proc){
 	int priority;
     Process *procc = (Process *)proc;
-    while (procc->dt != procc->run_time){
+    //printf("ENTROU!\n");
+    while (procc->run_time < procc->dt){ //mudamos aqui pra MENOR aqui
         pthread_mutex_lock(&(procc->mutex));
         priority = calcPriority(procc);
+        //printf("PRIORIDADE %d\n", priority);
         if (procc->dt - procc->run_time >= QUANTUM*priority){
             nap(QUANTUM*priority);
             procc->run_time += QUANTUM*priority;
@@ -151,6 +154,7 @@ void *simulateProcPRR(void *proc){
         }
         pthread_mutex_unlock(&mutex);
     }
+    //printf("SAIU\n");
     return NULL;
 }
 
@@ -169,6 +173,7 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
     /*O escalonador deve funcionar até todos os processos tiverem sido escalonados
      *e não há mais nehum processo para chegar.
      */
+    pthread_mutex_lock(&mutex);
     while(toSchedule != NULL || toArrive != NULL){
         clock_t begin = clock(); //calculo do tempo gasto pelo escalonador.
         toSchedule = add(toSchedule, &toArrive, clock_time, optional); //ve se processos novos chegaram ao sistema.
@@ -185,17 +190,28 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
             pthread_mutex_init(&(currProcess->info->mutex), NULL);
             if (optional == 1)
                 fprintf(stderr, "O processo %s começou usar a CPU %d\n", currProcess->info->name, 1);
-            if (scheduler_type == 2)
-                pthread_create(&(currProcess->info->thread), NULL, &simulateProcRR, currProcess->info);
-            else
-                pthread_create(&(currProcess->info->thread), NULL, &simulateProcPRR, currProcess->info);
+            if (scheduler_type == 2) {
+                if (pthread_create(&(currProcess->info->thread), NULL, &simulateProcRR, currProcess->info)) {
+    				printf("error creating thread.\n");
+    				exit(EXIT_FAILURE);
+  				}
+            	pthread_mutex_lock(&mutex);
+            }
+            else {
+            	//printf("Olá!!\n");
+                if (pthread_create(&(currProcess->info->thread), NULL, &simulateProcPRR, currProcess->info)) {
+    				printf("error creating thread.\n");
+    				exit(EXIT_FAILURE);
+  				}
+            	pthread_mutex_lock(&mutex);
+            }
         }
-        else{
+        else {
             if (optional == 1)
                 fprintf(stderr, "O processo %s começou usar a CPU %d\n", currProcess->info->name, 1);
             pthread_mutex_unlock(&(currProcess->info->mutex));
+            pthread_mutex_lock(&mutex);
         }
-        pthread_mutex_lock(&mutex);
         begin = clock(); //calculo do tempo gasto pelo escalonador.
         cs_counter++;
         if (optional == 1){
@@ -209,6 +225,7 @@ void roundRobin(char *inputFile, char *outputFile, int optional, int scheduler_t
             writeFile(outputFile, currProcess->info, clock_time, optional);
             pthread_mutex_destroy(&(currProcess->info->mutex));
             pthread_cancel(currProcess->info->thread);
+            pthread_join(currProcess->info->thread, NULL); // RESOLVE MEMORY LEAK
             List temp = currProcess->next;
             toSchedule = removeList(toSchedule, currProcess->info);
             currProcess = temp;

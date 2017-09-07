@@ -15,7 +15,7 @@ int cmpfunc(const void *a, const void *b)
 void writeFile(char *outputFile, Process *proc, double time, int optional){
     FILE *fp;
     fp = fopen(outputFile, "a");
-    fprintf(fp, "%s %f %f\n", proc->name, time, time - proc->t0);
+    fprintf(fp, "%s %.1f %.1f\n", proc->name, time, time - proc->t0);
     if (optional == 1)
         fprintf(stderr, "O processo %s foi finalizado e esta sendo escrito na linha %d\n", proc->name, output_line);
     output_line++;
@@ -50,6 +50,12 @@ List readFile(char *fileName)
         }
         array[i] = *temp;
         i++;
+        for (int k; k < 3; k++)
+            free(parsedLine[k]);
+        free(temp);
+        free(line);
+        len = 0;
+        free(parsedLine);
     }
     qsort(array, i, sizeof(Process), cmpfunc);
     while (j < i) {
@@ -57,6 +63,7 @@ List readFile(char *fileName)
         j++;
     }
     fclose (file_pointer);
+    free(line);
     return processQueue;
 }
 
@@ -128,6 +135,8 @@ List add(List toSchedule, List *toArrive, double time, int optional)
             tail->next = *head;
         (*temp)->next = NULL;
     }
+    free(head);
+    free(temp);
     return toSchedule;
 }
 
