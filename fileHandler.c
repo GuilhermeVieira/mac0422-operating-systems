@@ -12,38 +12,43 @@ int cmpfunc(const void *a, const void *b)
     return 1;
 }
 
-void writeFile(char *outputFile, Process *proc, double time, int optional){
+void writeFile(char *output_file, Process *proc, double time, int optional){
     FILE *fp;
-    fp = fopen(outputFile, "a");
+    fp = fopen(output_file, "a");
     fprintf(fp, "%s %.1f %.1f\n", proc->name, time, time - proc->t0);
     if (optional == 1)
-        fprintf(stderr, "O processo %s foi finalizado e esta sendo escrito na linha %d\n", proc->name, output_line);
+        fprintf(stderr, "O processo %s foi finalizado e está sendo escrito na "
+                        "linha %d.\n", proc->name, output_line);
     output_line++;
     fclose(fp);
     return;
 }
 
-List readFile(char *fileName)
+List readFile(char *file_name)
 {
-    List processQueue = createList();
+    List process_queue = createList();
     int n, size = 1, i = 0, j = 0;
     FILE *file_pointer;
     char *line = NULL;
-    char **parsedLine;
+    char **parsed_line;
     size_t len = 0;
     ssize_t read;
     Process *temp;
     Process *array = emalloc(sizeof(Process));
-    file_pointer = fopen(fileName, "r");
+    file_pointer = fopen(file_name, "r");
+
+    // Verifica se o arquivo existe.
     if (file_pointer == NULL) {
         fprintf(stderr, "ERRO: Arquivo não encontrado.\n");
         exit(EXIT_FAILURE);
     }
+    // Lê cada linha do arquivo de entrada e cria um processo para ela.
     while ((read = getline(&line, &len, file_pointer)) != -1) {
-        parsedLine = parseCommand(line, &n);
-        if(parsedLine[0][0] == '\0')
+        parsed_line = parseCommand(line, &n);
+        if(parsed_line[0][0] == '\0')
             continue;
-        temp = createProcess(atof(parsedLine[0]), atof(parsedLine[1]), atof(parsedLine[2]), parsedLine[3], i + 1);
+        temp = createProcess(atof(parsed_line[0]), atof(parsed_line[1]),
+                            atof(parsed_line[2]), parsed_line[3], i + 1);
         if (i >= size){
             size *= 2;
             array = erealloc(array, size*sizeof(Process));
@@ -51,20 +56,23 @@ List readFile(char *fileName)
         array[i] = *temp;
         i++;
         for (int k; k < 3; k++)
-            free(parsedLine[k]);
+            free(parsed_line[k]);
         free(temp);
         free(line);
         len = 0;
-        free(parsedLine);
+        free(parsed_line);
     }
+    // Ordena os processos por t0.
     qsort(array, i, sizeof(Process), cmpfunc);
+    // Adiciona os processos processosQueue.
     while (j < i) {
-        processQueue = addList(processQueue, &array[j]);
+        process_queue = addList(process_queue, &array[j]);
         j++;
     }
-    fclose (file_pointer);
     free(line);
-    return processQueue;
+    fclose (file_pointer);
+
+    return process_queue;
 }
 
 List createList()
@@ -91,7 +99,7 @@ List removeList(List root, Process *x)
         return root;
     if (!strcmp(root->info->name, x->name)){
        List temp = root->next;
-       destroyProcess(root->info); //bugada;
+       destroyProcess(root->info);
        free(root);
        return temp;
     }
@@ -114,30 +122,35 @@ Process *createProcess(double t0, double dt, double dl, char *name, int line)
 void destroyProcess(Process *x)
 {
     free(x->name);
-    //free(x); isso que esta bugado
     return;
 }
 
-List add(List toSchedule, List *toArrive, double time, int optional)
+List add(List to_schedule, List *to_arrive, double time, int optional)
 {
     List *temp, *head, tail;
     head = emalloc(sizeof(List));
     temp = emalloc(sizeof(List));
-    *head = *toArrive;
-    for (; *toArrive != NULL && (*toArrive)->info->t0 <= time; *temp = *toArrive, *toArrive = (*toArrive)->next)
+    *head = *to_arrive;
+
+    // Verifica se processos novos chegaram.
+    for (; *to_arrive != NULL && (*to_arrive)->info->t0 <= time;
+        *temp = *to_arrive, *to_arrive = (*to_arrive)->next)
         if (optional == 1)
-            fprintf(stderr, "o processo %s presente na linha %d do arquivo de trace chegou ao sistema\n", (*toArrive)->info->name, (*toArrive)->info->line);
-    if (*head != *toArrive && (*head)->info->t0 <= time){
-        tail = getTail(toSchedule);
+            fprintf(stderr, "O processo %s presente na linha %d do arquivo de "
+                            "trace chegou ao sistema.\n",
+                            (*to_arrive)->info->name, (*to_arrive)->info->line);
+    // Adiciona processos que chegaram na to_schedule.
+    if (*head != *to_arrive && (*head)->info->t0 <= time){
+        tail = getTail(to_schedule);
         if (tail == NULL)
-            toSchedule = *head;
+            to_schedule = *head;
         else
             tail->next = *head;
         (*temp)->next = NULL;
     }
     free(head);
     free(temp);
-    return toSchedule;
+    return to_schedule;
 }
 
 List getTail(List head)
