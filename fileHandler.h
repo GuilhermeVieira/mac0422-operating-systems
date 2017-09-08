@@ -40,7 +40,7 @@ List readFile(char *file_name);
 List createList();
 
 // Adiciona um processo ao final de uma lista ligada não ordenada de processos.
-List addList(List root, Process *new_process);
+List addList(List root, Process process);
 
 // Remove um processo (indentificado pelo seu nome) da lista ligada fornecida.
 List removeList(List root, Process *x);

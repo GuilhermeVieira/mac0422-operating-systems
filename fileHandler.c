@@ -45,8 +45,14 @@ List readFile(char *file_name)
     // Lê cada linha do arquivo de entrada e cria um processo para ela.
     while ((read = getline(&line, &len, file_pointer)) != -1) {
         parsed_line = parseCommand(line, &n);
-        if(parsed_line[0][0] == '\0')
+        //ve e ignora linhas vazias.
+        if(parsed_line[0][0] == '\0'){
+            free(line);
+            len = 0;
+            free(parsed_line[0]);
+            free(parsed_line);
             continue;
+        }
         temp = createProcess(atof(parsed_line[0]), atof(parsed_line[1]),
                             atof(parsed_line[2]), parsed_line[3], i + 1);
         if (i >= size){
@@ -66,10 +72,11 @@ List readFile(char *file_name)
     qsort(array, i, sizeof(Process), cmpfunc);
     // Adiciona os processos processosQueue.
     while (j < i) {
-        process_queue = addList(process_queue, &array[j]);
+        process_queue = addList(process_queue, array[j]);
         j++;
     }
     free(line);
+    free(array);
     fclose (file_pointer);
 
     return process_queue;
@@ -81,15 +88,16 @@ List createList()
     return root;
 }
 
-List addList(List root, Process *new_process)
+List addList(List root, Process process)
 {
     if (root == NULL){
         root = emalloc(sizeof(Cell));
-        root->info = new_process;
+        root->info = createProcess(process.t0, process.dt, process.deadline,
+                                    process.name, process.line);
         root->next = NULL;
         return root;
     }
-    root->next = addList(root->next, new_process);
+    root->next = addList(root->next, process);
     return root;
 }
 
@@ -122,6 +130,7 @@ Process *createProcess(double t0, double dt, double dl, char *name, int line)
 void destroyProcess(Process *x)
 {
     free(x->name);
+    free(x);
     return;
 }
 
