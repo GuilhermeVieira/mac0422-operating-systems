@@ -1,0 +1,85 @@
+1- Pagina:
+    titulo- EP1 MAC0422 2017:
+        Guilherme Costa Vieira               Nº USP: 9790930
+        Victor Chiaradia Gramuglia Araujo    Nº USP: 9793756
+2- Pagina:
+    titulo- Shell:
+        Nosso shell é um loop infinito que "pega" o dirétorio atual e a string
+fornecida pelo usuario. Usando as syscall's fork(), execvp(), waitpid() e nossa
+função de parser nossa shell executa o comando dado pelo usuario.
+3- Pagina:
+    titulo- date:
+        Para fazer a função date nos usamos a syscall time() para conseguir os
+segundos desde 1 Jan de 1970 e com isso usamos as funções ctime() e localtime(),
+definidas na time.h, para formatar no padrão desejavel.
+4- Pagina:
+    titulo- chow:
+        Para fazer nossa função chow usamos a syscall getgrnam() que retorna uma
+struct que possui com o gid (group id) da string fornecida para getgrnam. Com esse
+número usamos a syscall chown() definida na unistd.h para mudar o grupo do arquivo
+desejado.
+
+5- Pagina:
+    titulo- Escalonadores:
+        Nossas implementações dos escalonadores são monocores.
+        Nossos escalonadores usam listaS ligada de processos para guardar os
+processos que já chegaram ao sistema e aqueles que ainda não chegaram em listas
+separadas. Quando as duas listas estiverem vazias os escalonadores terminam seu
+trabalho.
+    //explica tudo isso na aula que são as funções e estruturas compartilhadas.
+        typedef struct {
+                    int line;
+                    double t0, dt, deadline, run_time;
+                    char *name;
+                    pthread_mutex_t mutex;
+                    pthread_t thread;
+                    } Process;
+
+        typedef struct node {
+                    Process *info;
+                    struct node *next;
+                    } Cell;
+
+        List readFile(char *file_name);
+
+        List add(List to_schedule, List *to_arrive, double time, int optional);
+
+        void writeFile(char *output_file, Process *proc, double time, int optional);
+
+        void nap(double dt);
+
+
+6-Pagina:
+    titulo- Shortest Job First (SJF):
+        O escalonador procura processo novos, dentre os processos que já chegaram
+ao sistema (t0 < clock_time) ele escolhe aquele que tem o menor dt para rodar. Usamos
+pthread_create para criar a nova thread e pthread_join() para funcionar como um semáforo
+ (//explica que pode pq não tem preempção). O processo apos dt segundos é escrito
+ no arquivo de saida, é removido da lista e o loop principal do SJF recomeça.
+
+7-Pagina:
+    titulo- Round Robin e Escalonador com prioridade:
+        Devido suas semelhanças eles foram implementados na mesma função, sua
+diferença sendo na funçao que simula o processo.
+        Como na SJF o escalonador ve se novos processos chegaram ao sistema, pórem
+o escalonador usa a ordem de chegada para determinar o próximo processo.
+        Se um processo não tinha sido  rodado até aquele momento (run_time == 0) seu semáforo
+é inicializado e uma thread é criada para o processo, caso contrário o semáforo
+do processo é liberado.
+        Um semáforo é travado (pthread_mutex_lock) para que o escalonador não
+continue a rodar, após o escalonador ser liberado ele ve se o ultimo processo acabou
+e o remove da lista e libera a mémoria dele. O próximo processo é escolhido e o
+loop reinicia.
+
+8-Pagina:
+    titulo- Prioridade:
+        Como um SO é um sistema dinámico foi decido que a prioridade de processo
+deve mudar cada vez que ele é simulado.
+        Em nossa ideia de justiça um processo que esta longe de sua deadline não
+precisa de uma prioridade alta, os que estão perto possuem uma maior prioridade e
+aqueles que já passarem dela não devem impedir que processos novos rodem e
+portanto também percam suas deadlines.
+        //coloca a equação aqui junto com o gráfico.
+
+RESTO:
+    as imagens que ele quer.        

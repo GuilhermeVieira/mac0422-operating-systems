@@ -15,6 +15,10 @@
 pthread_mutex_t mutex; // Semáforo usado para parar os escalonadores.
 double clock_time = 0; // Tempo que o programa usou para rodar.
 int cs_counter = 0; // Número de mudanças de contexo.
+typedef struct  {
+                Process *procc;
+                int optional;
+                } thread_args;
 
 // Recebe um double e irá consumir tempo real igual a esse número em segundos.
 void nap(double dt)
@@ -89,16 +93,12 @@ void SJF(char *input_file, char *output_file, int optional)
         if (pthread_join(thread, NULL)) { // Espécie de "semáforo".
             fprintf(stderr, "ERRO: Não foi possível dar join na thread.\n");
             exit(EXIT_FAILURE);
-        } 
+        }
 
         begin = clock(); // Cálculo do tempo gasto pelo escalonador.
         if (optional == 1)
             fprintf(stderr, "O processo %s deixou de usar a CPU %d.\n",
                     shortest->info->name, 1);
-
-        cs_counter++; // Incrementa o contador de mudanças de contexto.
-        if (optional == 1)
-            fprintf(stderr, "Mudança de contexto %d.\n", cs_counter);
 
         // Escreve os tempos do processo que acabou no arquivo de saída.
         writeFile(output_file, shortest->info, clock_time, optional);
@@ -109,28 +109,33 @@ void SJF(char *input_file, char *output_file, int optional)
         time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
         clock_time += time_spent;
     }
-    pthread_exit(NULL);
-    
+
     return;
 }
 
 /* Recebe um processo e simula ele por um QUANTUM ou pelo tempo restante que
  * ele possui. A função usa semáforos para simular a preempção. */
-void *simulateProcRR(void *proc)
+void *simulateProcRR(void *args)
 {
-    Process *procc = (Process *)proc;
-    while (procc->dt != procc->run_time) {
-        pthread_mutex_lock(&(procc->mutex));
-        if (procc->dt - procc->run_time >= QUANTUM) {
+    thread_args *t_args = emalloc(sizeof(thread_args));
+    *t_args = *((thread_args *)args);
+
+    while (t_args->procc->dt != t_args->procc->run_time) {
+        pthread_mutex_lock(&(t_args->procc->mutex));
+        if (t_args->procc->dt - t_args->procc->run_time > QUANTUM) {
             nap(QUANTUM);
-            procc->run_time += QUANTUM;
+            t_args->procc->run_time += QUANTUM;
+            cs_counter++;
+            if (t_args->optional)
+                fprintf(stderr, "Mudança de contexto %d\n", cs_counter);
         }
         else {
-            nap(procc->dt - procc->run_time);
-            procc->run_time += procc->dt - procc->run_time;
+            nap(t_args->procc->dt - t_args->procc->run_time);
+            t_args->procc->run_time += t_args->procc->dt - t_args->procc->run_time;
         }
         pthread_mutex_unlock(&mutex);
     }
+    free(t_args);
     return NULL;
 }
 
@@ -152,25 +157,30 @@ int calcPriority(Process *proc)
 /* Recebe um processo e simula ele por um múltiplo de um QUANTUM (prioridade
  * do processo) ou pelo tempo restante que ele possui. A função usa semáforos
  * para simular a preempção. */
-void *simulateProcPRR(void *proc)
+void *simulateProcPRR(void *args)
 {
     int priority;
-    Process *procc = (Process *)proc;
+    thread_args *t_args = emalloc(sizeof(thread_args));
+    *t_args = *((thread_args *)args);
 
-    while (procc->run_time < procc->dt) {
-        pthread_mutex_lock(&(procc->mutex));
-        priority = calcPriority(procc);
+    while (t_args->procc->run_time < t_args->procc->dt) {
+        pthread_mutex_lock(&(t_args->procc->mutex));
+        priority = calcPriority(t_args->procc);
 
-        if (procc->dt - procc->run_time >= QUANTUM*priority) {
+        if (t_args->procc->dt - t_args->procc->run_time > QUANTUM*priority) {
             nap(QUANTUM*priority);
-            procc->run_time += QUANTUM*priority;
+            t_args->procc->run_time += QUANTUM*priority;
+            cs_counter++;
+            if (t_args->optional)
+                fprintf(stderr, "Mudança de contexto %d\n", cs_counter);
         }
         else {
-            nap(procc->dt - procc->run_time);
-            procc->run_time += procc->dt - procc->run_time;
+            nap(t_args->procc->dt - t_args->procc->run_time);
+            t_args->procc->run_time += t_args->procc->dt - t_args->procc->run_time;
         }
         pthread_mutex_unlock(&mutex);
     }
+    free(t_args);
     return NULL;
 }
 
@@ -186,6 +196,7 @@ void roundRobin(char *input_file, char *output_file, int optional,
     List to_arrive, to_schedule = NULL;
     List curr_process = NULL;
     to_arrive = readFile(input_file); // Lê o arquivo de entrada.
+    thread_args *args = emalloc(sizeof(thread_args));
     pthread_mutex_init(&mutex, NULL);
 
     /* O escalonador funciona até todos os processos tiverem sido escalonados
@@ -217,16 +228,18 @@ void roundRobin(char *input_file, char *output_file, int optional,
                 fprintf(stderr, "O processo %s começou usar a CPU %d.\n",
                         curr_process->info->name, 1);
             // Escolhe o tipo de escalonador.
+            args->procc = curr_process->info;
+            args->optional = optional;
             if (scheduler_type == 2) {
                 if (pthread_create(&(curr_process->info->thread), NULL,
-                                    &simulateProcRR, curr_process->info)) {
+                                    &simulateProcRR, args)) {
                     fprintf(stderr, "ERRO: Não foi possível criar thread.\n");
                     exit(EXIT_FAILURE);
                 }
             }
             else {
                 if (pthread_create(&(curr_process->info->thread), NULL,
-                                    &simulateProcPRR, curr_process->info)) {
+                                    &simulateProcPRR, args)) {
                     fprintf(stderr, "ERRO: Não foi possível criar thread.\n");
                     exit(EXIT_FAILURE);
                 }
@@ -243,11 +256,9 @@ void roundRobin(char *input_file, char *output_file, int optional,
         // Volta para o escalonador.
         pthread_mutex_lock(&mutex);
         begin = clock(); // Cálculo do tempo gasto pelo escalonador.
-        cs_counter++;
         if (optional == 1) {
             fprintf(stderr, "O processo %s deixou de usar a CPU %d\n",
                     curr_process->info->name, 1);
-            fprintf(stderr, "Mudança de contexto %d\n", cs_counter);
         }
 
         /* Se o processo acabou, ele é inserido no output_file e retirado da
@@ -271,7 +282,7 @@ void roundRobin(char *input_file, char *output_file, int optional,
         time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
         clock_time += time_spent;
     }
-    pthread_exit(NULL);
+    free(args);
 
     return;
 }
