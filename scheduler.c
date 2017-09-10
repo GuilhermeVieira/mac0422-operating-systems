@@ -147,11 +147,9 @@ int calcPriority(Process *proc)
 {
     // A função é -((clock_time - deadline)/dt)^2 + 10.
     double priority = -pow(((clock_time - proc->deadline)/proc->dt), 2) + 10;
-    if (priority > 1) {
-        if ((int)(priority + 1) < 5 && clock_time > proc->deadline) return 5;
-        return (int)(priority + 1);
-    }
-    return 1; // Limite inferior para a função de segundo grau.
+    if (priority < 1)
+        return 1; // Limite inferior para a função de segundo grau.
+    return (int)(priority + 1);
 }
 
 /* Recebe um processo e simula ele por um múltiplo de um QUANTUM (prioridade
