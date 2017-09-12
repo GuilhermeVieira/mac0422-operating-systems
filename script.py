@@ -138,7 +138,7 @@ def main():
 		for j in range(n_processes):
 			line = f.readline()
 		line = f.readline() #Lê a linha com o total de mudanças de contexto
-		cs_sheet.write(i+1,1, int(line[0])) # Nº de mudança de contexto
+		cs_sheet.write(i+1,1, int(line)) # Nº de mudança de contexto
 		f.close()
 
 	line = []
@@ -150,7 +150,7 @@ def main():
 		for j in range(n_processes):
 			line = f.readline()
 		line = f.readline() #Lê a linha com o total de mudanças de contexto
-		cs_sheet.write(i+1,2, int(line[0])) # Nº de mudança de contexto
+		cs_sheet.write(i+1,2, int(line)) # Nº de mudança de contexto
 		f.close()
 
 	line = []
@@ -163,7 +163,7 @@ def main():
 			line = f.readline()
 
 		line = f.readline() #Lê a linha com o total de mudanças de contexto
-		cs_sheet.write(i+1,3, int(line[0])) # Nº de mudança de contexto
+		cs_sheet.write(i+1,3, int(line)) # Nº de mudança de contexto
 		f.close()
 
 	wb.save('acabeiDeRodarRENOMEAR.xls')
