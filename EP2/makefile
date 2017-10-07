@@ -1,2 +1,5 @@
+CFLAGS = -Wall -Werror -g -pthread
+CC = gcc
+
 ep2 : simulator.c
-	gcc simulator.c -pthread -o ep2
+	$(CC) $? $(CFLAGS) -o $@ -I.
