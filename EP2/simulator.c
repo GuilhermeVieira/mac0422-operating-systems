@@ -5,12 +5,12 @@
 
 #define LANES 10
 
-
 typedef unsigned int uint;
-
 typedef struct { uint d, n, v, tag;} thread_arg;
 typedef struct { int x, y;} position;
 
+pthread_barrier_t barrier;
+pthread_mutex_t track_mutex;
 pthread_mutex_t *sem_vec;
 uint **pista;
 
@@ -80,6 +80,19 @@ uint **initializeTrack(uint d, uint n)
   	return new_track;
 }
 
+int updatePosition(position *pos, int lenth)
+{
+  	int new_pos = pos->x - 1;
+	if (new_pos < 0)
+      	new_pos = lenth - 1;
+  	if (pista[new_pos][pos->y] == 0)
+      	pos->x = new_pos;
+  	else
+      	return 1;
+  	return 0;
+}
+
+
 void updateTrack(position *pos)
 {
 
@@ -94,26 +107,43 @@ void destroyTrack(uint **track, uint d)
   	return;
 }
 
+void manager()
+{
+
+  	return;
+}
+
 
 void *ciclista(void *args)
 {
 	int updatePos = 0;
 	int refresh = 2;
+  	int blocked = 0; // Vale 1 se o ciclista frente está bloqueando a passagem.
   	thread_arg *arg = (thread_arg *) args;
+  	pthread_mutex_init(&(sem_vec[arg->tag -1]), NULL);
+  	pthread_mutex_lock(&(sem_vec[arg->tag -1]));
   	uint laps = 0;
   	position *pos = emalloc(sizeof(position));
   	pos->x = (arg->tag - 1)/10;
   	pos->y = (arg->tag - 1)%10;
   	int velocity = 30;
   	while (laps < arg->v){
-  		updatePos += ((int) velInRefreshTime(velocity, refresh)*refresh)%refresh;
-  		if (updatePos == 0)
-  			/*atualiza a pos*/
-  		if (pos->x == arg->d - 1){
-  			velocity =  getNewVelocity(velocity);
-  			laps++;
-  		}
-  		/*barreira*/
+      	pthread_mutex_lock(&(sem_vec[arg->tag -1]));
+      	if (!blocked)
+  			updatePos += ((int) velInRefreshTime(velocity, refresh)*refresh)%refresh;
+      	else
+          	updatePos = 0;
+      	if (updatePos == 0){
+  			blocked = updatePosition(pos, arg->n);
+          	pthread_mutex_lock(&track_mutex);
+            updateTrack(pos);
+          	pthread_mutex_unlock(&track_mutex);
+            if (pos->x == arg->d - 1){
+  				velocity =  getNewVelocity(velocity);
+  				laps++;
+  			}
+        }
+		pthread_barrier_wait(&barrier);
   	}
   	return NULL;
 }
@@ -127,7 +157,7 @@ int main(int argc, char **argv)
   	sem_vec = emalloc(n*sizeof(pthread_mutex_t));
   	pista = initializeTrack(d, n);
   	thread_arg *args = emalloc(n*sizeof(thread_arg));
-
+	pthread_mutex_init(&track_mutex, NULL);
   	pthread_t thread[n];
 
   	for (uint i = 0; i < n; i++){
