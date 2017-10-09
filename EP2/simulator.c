@@ -31,6 +31,10 @@ void *emalloc(size_t size)
 
 double velInRefreshTime (double velocity, int refresh)
 {
+    /*   Km   1000m   1 hora    1s
+        ---- *----- * ------ * -----
+        hora   1 Km   3600s    1000 ms
+    */
     if (refresh == 2)
         return (velocity/3600)*60;
     else
@@ -85,29 +89,43 @@ uint **initializeTrack(uint d, uint n)
   	return new_track;
 }
 
-int updatePosition(position *pos, int lenth)
+/* Recebe um ponteiro pos de um ciclista e o tamanho da pista. Se conseguir achar uma posição nova para
+ * o ciclista, atualiza o ponteiro pos com a nova posição e retorna 0. Caso o ciclista seja bloqueado,
+ * retorna 1. */
+int updatePosition(position *pos, int length)
 {
   	int new_pos_x = pos->x - 1;
     int new_pos_y = pos->y;
     /*Ve se tem que usar a circularidade da pista*/
     if (new_pos_x < 0)
-      	new_pos_x = lenth - 1;
+      	new_pos_x = length - 1;
+
+  	/* Vai pra esquerda e pra frente (diagonal) ultimo if verifica se n é ultrapassagem pela interna */
+    if (pos->y > 0 && pista[pos->x][pos->y - 1] == 0 && pista[new_pos_x][pos->y - 1] == 0 && pista[new_pos_x][pos->y] == 0){
+		pos->x = new_pos_x;
+      	pos->y = new_pos_y - 1;
+      	return 0;
+    }
+
     /*Ve se pode ir imediatamente para frente*/
     if (pista[new_pos_x][pos->y] == 0){
       	pos->x = new_pos_x;
-        /*Ir para à esquerda sempre que der*/
-        if (pos->y > 0 && pista[new_pos_x][pos->y - 1] == 0)
-            pos->y = new_pos_y - 1;
         return 0;
     }
     /*Ver se pode ir para ultrapassar pela direita*/
     else {
-        for (; new_pos_y < LANES; new_pos_y++)
-            if (pista[pos->x][new_pos_y] == 0 && pista[new_pos_x][new_pos_y] == 0){
-                pos->x = new_pos_x;
-                pos->y = new_pos_y;
-                return 0;
-            }
+      	for (; new_pos_y < LANES; new_pos_y++){
+          	if (pista[pos->x][new_pos_y] == 0)
+          		if (pista[new_pos_x][new_pos_y] == 0){
+        			pos->x = new_pos_x;
+               		pos->y = new_pos_y;
+                	return 0;
+        		}
+          		else
+                  	continue;
+          	else
+          		break;
+        }
     }
     /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
     return 1;
@@ -129,11 +147,55 @@ void destroyTrack(uint **track, uint d)
   	return;
 }
 
+int hasBeenSimulated(uint *bob, int bob2)
+{
+    return 1;
+}
+
 void manager()
 {
+	uint aligned_cyclists[LANES];
+  	uint already_simulated[LANES];
+  	int count = 0; // nº de ciclistas numa linha
 
+  	/* inicializa o vetor com 0 */
+  	for (int i = 0; i < LANES; i++)
+		aligned_cyclists[i] = already_simulated[i] = 0;
+
+    while (n_cyclists > 0) {
+    	/*todo mundo é simulado UMA vez, não ser que ele vai da 0 para n - 1*/
+
+
+  		for (int i = 0; i < n; i++){
+
+      		for (int j = 0; j < LANES; j++){
+              	if (i == 0)
+					already_simulated[j] = pista[i][j];
+              	/* se a  gente já simulou esse cara antes */
+              	if (i == n - 1 && hasBeenSimulated(already_simulated, pista[i][j]) == 1)
+                      aligned_cyclists[j] = 0;
+              	else
+                  	aligned_cyclists[j] = pista[i][j];
+
+                if (aligned_cyclists[j] != 0)
+              		count++;
+    		}
+
+          	pthread_barrier_init(&barrier, NULL, count + 1);
+
+          	for (int i = 0; i < LANES; i++){
+      			if (aligned_cyclists[i] != 0)
+      				pthread_mutex_unlock(&(sem_vec[aligned_cyclists[i] - 1]));
+       		}
+
+            pthread_barrier_wait(&barrier);
+        	pthread_barrier_wait(&barrier);
+
+    	}
+    }
   	return;
 }
+
 
 
 void *ciclista(void *args)
@@ -170,7 +232,7 @@ void *ciclista(void *args)
         }
         /*espera todas as threads calcularem sua nova pos*/
         pthread_barrier_wait(&barrier);
-        /*só uma thread pode mudar a sua pos por vez, ainda pode bugar, o cara manda pro valor certo e dps um cara manda para um errado*/
+        /*só uma thread pode mudar a sua pos por vez*/
         pthread_mutex_lock(&track_mutex);
         updateTrack(pos, old_pos, arg->tag);
         pthread_mutex_unlock(&track_mutex);
