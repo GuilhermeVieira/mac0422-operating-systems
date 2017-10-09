@@ -2,6 +2,7 @@
 #include <stdlib.h> //atoi(), malloc(), rand(), srand().
 #include <time.h> //time().
 #include <pthread.h> //pthreads.
+#include <unistd.h>
 
 #define LANES 10
 
@@ -31,23 +32,23 @@ void *emalloc(size_t size)
         return pointer;
 }
 
-double velInRefreshTime (double velocity, int refresh)
+double velInRefreshTime (int velocity, int refresh)
 {
     /*   Km   1000m   1 hora    1s
         ---- *----- * ------ * -----
         hora   1 Km   3600s    1000 ms
     */
+    double vel = (double) velocity;
     if (refresh == 2)
-        return (velocity/3600)*60;
+        return (vel/3600)*60;
     else
-        return (velocity/3600)*20;
+        return (vel/3600)*20;
 }
 
 int getNewVelocity (int velocity)
 {
   	int prob;
 
-    srand(time(NULL));
   	prob = rand()%100;
 
     if (velocity == 30)
@@ -159,49 +160,51 @@ int hasBeenSimulated(uint *already_simulated, int x)
 
 void *manager(void *args)
 {
-    manager_args *arg = (manager_args *) args;
+    manager_args *arg;
+    arg = (manager_args *) args;
 	uint aligned_cyclists[LANES];
   	uint already_simulated[LANES];
-  	int count = 0; // nº de ciclistas numa linha
+  	int count; // nº de ciclistas numa linha
 
   	/* inicializa o vetor com 0 */
   	for (int i = 0; i < LANES; i++)
 		aligned_cyclists[i] = already_simulated[i] = 0;
-
     while (n_cyclists > 0) {
-    	/*todo mundo é simulado UMA vez, não ser que ele vai da 0 para n - 1*/
-
-
-  		for (int i = 0; i < arg->d; i++){
-
-      		for (int j = 0; j < LANES; j++){
+        /*todo mundo é simulado UMA vez, não ser que ele vai da 0 para n - 1*/
+        for (int i = 0; i < arg->d; i++){
+            count = 1;
+            for (int j = 0; j < LANES; j++){
               	if (i == 0)
 					already_simulated[j] = pista[i][j];
               	/* se a  gente já simulou esse cara antes */
-              	if (i == arg->d - 1 && hasBeenSimulated(already_simulated, pista[i][j]) == 1)
+                if (i == arg->d - 1 && hasBeenSimulated(already_simulated, pista[i][j]) == 1){
                       aligned_cyclists[j] = 0;
+                }
               	else
                   	aligned_cyclists[j] = pista[i][j];
 
-                if (aligned_cyclists[j] != 0)
-              		count++;
+                if (aligned_cyclists[j] != 0){
+                    count++;
+                }
     		}
-
-          	pthread_barrier_init(&barrier, NULL, count + 1);
+          	pthread_barrier_init(&barrier, NULL, count);
 
           	for (int i = 0; i < LANES; i++){
       			if (aligned_cyclists[i] != 0)
-      				pthread_mutex_unlock(&(sem_vec[aligned_cyclists[i] - 1]));
+                    pthread_mutex_unlock(&(sem_vec[aligned_cyclists[i] - 1]));
        		}
-
             pthread_barrier_wait(&barrier);
         	pthread_barrier_wait(&barrier);
-
+            for (int i = 0; i < arg->d; i++){
+                for (int j = 0; j < LANES; j++)
+                    printf("%d ", pista[i][j]);
+                printf("\n");
+            }
+            printf("\n");
     	}
     }
   	return NULL;
 }
-
 
 
 void *ciclista(void *args)
@@ -216,16 +219,13 @@ void *ciclista(void *args)
     position *old_pos = emalloc(sizeof(position));
   	pos->x = old_pos->x = (arg->tag - 1)/10;
   	pos->y = old_pos->y = (arg->tag - 1)%10;
-
-    pthread_mutex_init(&(sem_vec[arg->tag -1]), NULL);
-    pthread_mutex_lock(&(sem_vec[arg->tag -1]));
-
     while (laps < arg->v){
-      	pthread_mutex_lock(&(sem_vec[arg->tag -1]));
-
-        if (!blocked)
-  			updatePos = (updatePos + ((int) velInRefreshTime(velocity, refresh)*refresh))%refresh;
-
+        pthread_mutex_lock(&(sem_vec[arg->tag -1]));
+        old_pos->x = pos->x;
+        old_pos->y = pos->y;
+        if (!blocked){
+  			updatePos = (updatePos + ((int) (velInRefreshTime(velocity, refresh)*refresh)))%refresh;
+        }
         else
           	updatePos = 0;
 
@@ -261,18 +261,19 @@ int main(int argc, char **argv)
     manager_args *m_args = emalloc(sizeof(manager_args));
   	pista = initializeTrack(d, n);
 	pthread_mutex_init(&track_mutex, NULL);
-
+    srand(time(NULL));
   	for (uint i = 0; i < n; i++){
       	args[i].d = d;
       	args[i].v = v;
       	args[i].tag = i + 1;
+        pthread_mutex_init(&(sem_vec[i]), NULL);
+        pthread_mutex_lock(&(sem_vec[i]));
       	pthread_create(&(thread[i]), NULL, &ciclista, &args[i]);
     }
     m_args->d = d;
     m_args->v = v;
-  	pthread_create(&thread[n], NULL, &manager, &m_args);
-
-    pthread_join(thread[n + 1], NULL);
+  	pthread_create(&thread[n], NULL, &manager, m_args);
+    pthread_join(thread[n], NULL);
 
     destroyTrack(pista, d);
 
