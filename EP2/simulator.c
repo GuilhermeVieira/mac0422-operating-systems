@@ -6,12 +6,14 @@
 #define LANES 10
 
 typedef unsigned int uint;
-typedef struct { uint d, n, v, tag;} thread_arg;
+typedef struct { uint d, v, tag;} thread_arg;
+typedef struct { uint d, v;} manager_args;
 typedef struct { int x, y;} position;
 
 pthread_barrier_t barrier;
 pthread_mutex_t track_mutex;
 pthread_mutex_t *sem_vec;
+uint n_cyclists = 0;
 uint **pista;
 
 void *emalloc(size_t size)
@@ -147,13 +149,17 @@ void destroyTrack(uint **track, uint d)
   	return;
 }
 
-int hasBeenSimulated(uint *bob, int bob2)
+int hasBeenSimulated(uint *already_simulated, int x)
 {
-    return 1;
+	for (int i = 0; i < LANES; i++)
+      	if (already_simulated[i] == x)
+      		return 1;
+    return 0;
 }
 
-void manager()
+void *manager(void *args)
 {
+    manager_args *arg = (manager_args *) args;
 	uint aligned_cyclists[LANES];
   	uint already_simulated[LANES];
   	int count = 0; // nº de ciclistas numa linha
@@ -166,13 +172,13 @@ void manager()
     	/*todo mundo é simulado UMA vez, não ser que ele vai da 0 para n - 1*/
 
 
-  		for (int i = 0; i < n; i++){
+  		for (int i = 0; i < arg->d; i++){
 
       		for (int j = 0; j < LANES; j++){
               	if (i == 0)
 					already_simulated[j] = pista[i][j];
               	/* se a  gente já simulou esse cara antes */
-              	if (i == n - 1 && hasBeenSimulated(already_simulated, pista[i][j]) == 1)
+              	if (i == arg->d - 1 && hasBeenSimulated(already_simulated, pista[i][j]) == 1)
                       aligned_cyclists[j] = 0;
               	else
                   	aligned_cyclists[j] = pista[i][j];
@@ -193,7 +199,7 @@ void manager()
 
     	}
     }
-  	return;
+  	return NULL;
 }
 
 
@@ -224,7 +230,7 @@ void *ciclista(void *args)
           	updatePos = 0;
 
         if (updatePos == 0){
-  			blocked = updatePosition(pos, arg->n);
+  			blocked = updatePosition(pos, arg->d);
             if (pos->x == arg->d - 1){
   				velocity = getNewVelocity(velocity);
   				laps++;
@@ -247,23 +253,26 @@ int main(int argc, char **argv)
   	uint d = atoi(argv[1]);
   	uint n = atoi(argv[2]);
   	uint v = atoi(argv[3]);
-    pthread_t thread[n];
+    pthread_t thread[n + 1];
 
+    n_cyclists = n;
   	sem_vec = emalloc(n*sizeof(pthread_mutex_t));
   	thread_arg *args = emalloc(n*sizeof(thread_arg));
-    pista = initializeTrack(d, n);
+    manager_args *m_args = emalloc(sizeof(manager_args));
+  	pista = initializeTrack(d, n);
 	pthread_mutex_init(&track_mutex, NULL);
 
   	for (uint i = 0; i < n; i++){
       	args[i].d = d;
-      	args[i].n = n;
       	args[i].v = v;
       	args[i].tag = i + 1;
       	pthread_create(&(thread[i]), NULL, &ciclista, &args[i]);
     }
+    m_args->d = d;
+    m_args->v = v;
+  	pthread_create(&thread[n], NULL, &manager, &m_args);
 
-    for (int i = 0; i < n; i++)
-    	pthread_join(thread[i], NULL);
+    pthread_join(thread[n + 1], NULL);
 
     destroyTrack(pista, d);
 
