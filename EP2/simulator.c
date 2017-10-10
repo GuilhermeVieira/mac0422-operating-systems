@@ -2,7 +2,7 @@
 #include <stdlib.h> //atoi(), malloc(), rand(), srand().
 #include <time.h> //time().
 #include <pthread.h> //pthreads.
-#include <unistd.h>
+#include <unistd.h> //
 
 #define LANES 10
 
@@ -30,6 +30,16 @@ void *emalloc(size_t size)
 
     else
         return pointer;
+}
+
+void printMatrix(uint d)
+{
+    for (int i = 0; i < d; i++){
+       for (int j = 0; j < LANES; j++)
+            printf("%d ", pista[i][j]);
+        printf("\n");
+    }
+    printf("\n");
 }
 
 double velInRefreshTime (int velocity, int refresh)
@@ -169,14 +179,17 @@ void *manager(void *args)
   	/* inicializa o vetor com 0 */
   	for (int i = 0; i < LANES; i++)
 		aligned_cyclists[i] = already_simulated[i] = 0;
+
     while (n_cyclists > 0) {
         /*todo mundo é simulado UMA vez, não ser que ele vai da 0 para n - 1*/
         for (int i = 0; i < arg->d; i++){
             count = 1;
+
             for (int j = 0; j < LANES; j++){
               	if (i == 0)
 					already_simulated[j] = pista[i][j];
-              	/* se a  gente já simulou esse cara antes */
+              	
+                /* se a  gente já simulou esse cara antes */
                 if (i == arg->d - 1 && hasBeenSimulated(already_simulated, pista[i][j]) == 1){
                       aligned_cyclists[j] = 0;
                 }
@@ -189,18 +202,18 @@ void *manager(void *args)
     		}
           	pthread_barrier_init(&barrier, NULL, count);
 
-          	for (int i = 0; i < LANES; i++){
-      			if (aligned_cyclists[i] != 0)
-                    pthread_mutex_unlock(&(sem_vec[aligned_cyclists[i] - 1]));
+          	for (int j = 0; j < LANES; j++){
+      			if (aligned_cyclists[j] != 0)
+                    pthread_mutex_unlock(&(sem_vec[aligned_cyclists[j] - 1]));
        		}
             pthread_barrier_wait(&barrier);
         	pthread_barrier_wait(&barrier);
-            for (int i = 0; i < arg->d; i++){
-                for (int j = 0; j < LANES; j++)
-                    printf("%d ", pista[i][j]);
-                printf("\n");
+
+            if (count != 1) {
+                printMatrix(arg->d);
+                sleep(1);
             }
-            printf("\n");
+
     	}
     }
   	return NULL;
