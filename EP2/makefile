@@ -4,5 +4,5 @@
 CFLAGS = -Wall -Werror -g -pthread
 CC = gcc
 
-ep2 : simulator2.c track.c
+ep2 : simulator.c track.c
 		$(CC) $? $(CFLAGS) -o $@ -I.
