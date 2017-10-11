@@ -11,6 +11,8 @@ typedef struct { uint d, v, tag;} thread_arg;
 typedef struct { int x, y;} position;
 
 pthread_mutex_t track_mutex;
+pthread_mutex_t n_cyclists_mutex;
+
 pthread_barrier_t barrier1;
 pthread_barrier_t barrier2;
 pthread_t *threadD;
@@ -36,7 +38,7 @@ void *emalloc(size_t size)
 void *printMatrix(void *arg)
 {
     uint d = *((uint *) arg);
-  	while (1) {
+  	while (n_cyclists > 0) {
       	pthread_barrier_wait(&barrier1);
 	    for (int i = 0; i < d; i++){
     	   for (int j = 0; j < LANES; j++)
@@ -206,6 +208,11 @@ void *ciclista(void *args)
       	pthread_barrier_wait(&barrier2);
     }
     pista[pos->x][pos->y] = 0;
+
+    pthread_mutex_lock(&n_cyclists_mutex);
+    n_cyclists--;
+    pthread_mutex_unlock(&n_cyclists_mutex);
+
     pthread_create(&(threadD[arg->tag - 1]), NULL, &dummy, NULL);
     pthread_join(threadD[arg->tag - 1], NULL);
     free(pos);
@@ -228,6 +235,9 @@ int main(int argc, char **argv)
         mov[i] = 0;
     }
   	pista = initializeTrack(d, n);
+
+    pthread_mutex_init(&n_cyclists_mutex, NULL);
+
     pthread_barrier_init(&barrier1, NULL ,n);
     pthread_barrier_init(&barrier2, NULL ,n);
     srand(time(NULL));
