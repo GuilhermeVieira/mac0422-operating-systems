@@ -13,6 +13,7 @@ typedef struct { int x, y;} position;
 pthread_mutex_t track_mutex;
 pthread_barrier_t barrier1;
 pthread_barrier_t barrier2;
+pthread_t *threadD;
 uint n_cyclists = 0;
 int *mov;
 uint **pista;
@@ -32,14 +33,20 @@ void *emalloc(size_t size)
         return pointer;
 }
 
-void printMatrix(uint d)
+void *printMatrix(void *arg)
 {
-    for (int i = 0; i < d; i++){
-       for (int j = 0; j < LANES; j++)
-            printf("%d ", pista[i][j]);
-        printf("\n");
+    uint d = *((uint *) arg);
+  	while (1) {
+      	pthread_barrier_wait(&barrier1);
+	    for (int i = 0; i < d; i++){
+    	   for (int j = 0; j < LANES; j++)
+        	    printf("%d ", pista[i][j]);
+        	printf("\n");
+    	}
+    	printf("\n");
+      	pthread_barrier_wait(&barrier2);
     }
-    printf("\n");
+  	return NULL;
 }
 
 double velInRefreshTime (int velocity, int refresh)
@@ -156,34 +163,13 @@ void destroyTrack(uint **track, uint d)
   	return;
 }
 
-void canUpdate(int i, uint d, uint tag)
+void *dummy()
 {
-  	for (int j = 0; j < LANES; j++)
-      	if (pista[i][j] != 0){
-      		//printf("Sou o ciclista %u e tô vendo o %d\n", tag, pista[i][j] - 1);
-      		while (1) {
-  				printf("Sou %u e FDP %d\n", tag, mov[pista[i][j] - 1]);
-      			if (mov[pista[i][j] - 1] != 0){
-      				printf("foi\n");
-      				break;
-      			}
-      			//sleep(1);
-      		}
-      	}
-	return;
-}
-
-void canMov(position pos, uint d)
-{
-  	int i = pos.x - 1;
-  	if (i == -1)
-      	i = d - 1;
-  	for (int j = 0; j < LANES; j++)
-      	if (pista[i][j] != 0)
-      		while (mov[pista[i][j] - 1] != 2){
-      			//sleep(1);
-      		}
-  	return;
+    while (1){
+        pthread_barrier_wait(&barrier1); //espera todo mundo atualizar sua pos
+      	pthread_barrier_wait(&barrier2);
+    }
+    return NULL;
 }
 
 void *ciclista(void *args)
@@ -201,9 +187,6 @@ void *ciclista(void *args)
     while (laps <= arg->v){
 		old_pos->x = pos->x;
       	old_pos->y = pos->y;
-      	
-    	canMov(*pos, arg->d);
-    	printf("Sou o %u e sai da canMov\n", arg->tag);
 
         if (!blocked){
   			updatePos = (updatePos + ((int) (velInRefreshTime(velocity, refresh)*refresh)))%refresh;
@@ -218,25 +201,13 @@ void *ciclista(void *args)
   				laps++;
   			}
         }
-      	mov[arg->tag -1] = 1;
-      	//printf("Eu sou o ciclista %d e cheguei na canUpdate\n", arg->tag);
-      	//printf("Sou %u, estava na %u,%u e vou para %u,%u\n", arg->tag, old_pos->x, old_pos->y, pos->x, pos->y);
-      	printf("Sou o %u e entrei da canUpdate\n", arg->tag);
-      	canUpdate(old_pos->x, arg->d, arg->tag);
-      	printf("Sou o %u e sai da canUpdate\n", arg->tag);
-      	
-      	pthread_mutex_lock(&track_mutex);
-        updateTrack(pos, old_pos, arg->tag);
-        pthread_mutex_unlock(&track_mutex);
-      	
-      	mov[arg->tag -1] = 2;
-
-      	//printf("Eu sou o ciclista %d e cheguei na barreira 1\n", arg->tag);
       	pthread_barrier_wait(&barrier1); //espera todo mundo atualizar sua pos
-      	mov[arg->tag -1] = 0;
-      	if (arg->tag == 1) printMatrix(arg->d);
+        updateTrack(pos, old_pos, arg->tag);
       	pthread_barrier_wait(&barrier2);
     }
+    pista[pos->x][pos->y] = 0;
+    pthread_create(&(threadD[arg->tag - 1]), NULL, &dummy, NULL);
+    pthread_join(threadD[arg->tag - 1], NULL);
     free(pos);
     free(old_pos);
     return NULL;
@@ -247,8 +218,9 @@ int main(int argc, char **argv)
   	uint d = atoi(argv[1]);
   	uint n = atoi(argv[2]);
   	uint v = atoi(argv[3]);
-    pthread_t thread[n];
+    pthread_t thread[n + 1];
 
+    threadD = emalloc(n*sizeof(pthread_t));
     n_cyclists = n;
   	thread_arg *args = emalloc(n*sizeof(thread_arg));
     mov = emalloc(n*sizeof(int));
@@ -256,7 +228,6 @@ int main(int argc, char **argv)
         mov[i] = 0;
     }
   	pista = initializeTrack(d, n);
-  	pthread_mutex_init(&track_mutex, NULL);
     pthread_barrier_init(&barrier1, NULL ,n);
     pthread_barrier_init(&barrier2, NULL ,n);
     srand(time(NULL));
@@ -266,6 +237,7 @@ int main(int argc, char **argv)
       	args[i].tag = i + 1;
       	pthread_create(&(thread[i]), NULL, &ciclista, &args[i]);
     }
+    pthread_create(&(thread[n + 1]), NULL, &printMatrix, &d);
     for (int i = 0; i < n; i++)
         pthread_join(thread[i], NULL);
 
