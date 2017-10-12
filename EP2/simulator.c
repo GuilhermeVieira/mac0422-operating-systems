@@ -10,14 +10,15 @@
 #define MS20  6
 
 typedef struct { uint d, v, tag, lucky;} thread_arg;
+typedef struct { uint d, debug;} thread_report_arg;
 
 pthread_mutex_t n_cyclists_mutex;
-
 pthread_barrier_t barrier1;
 pthread_barrier_t barrier2;
 pthread_t *thread_dummy;
-int refresh = MS60;
+
 uint n_cyclists = 0;
+int refresh = MS60;
 int is_over;
 
 int break_cyclists(uint laps)
@@ -106,25 +107,25 @@ int updatePosition(position *pos, int length)
     /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
     return 1;
 }
-void *report(void *arg)
+
+void *report(void *args)
 {
-    uint d = *((uint *) arg);
+    thread_report_arg *arg = (thread_report_arg *) args;
     while (1) {
-      pthread_barrier_wait(&barrier1);
-      if (is_over) break;
-      pthread_barrier_wait(&barrier2);
-      if (n_cyclists > 0) {
-            for (int i = 0; i < d; i++) {
-               for (int j = 0; j < LANES; j++)
+        pthread_barrier_wait(&barrier1);
+        if (is_over) break;
+        pthread_barrier_wait(&barrier2);
+        if (arg->debug && n_cyclists > 0) {
+            for (int i = 0; i < arg->d; i++) {
+                for (int j = 0; j < LANES; j++)
                     printf("%d ", pista[i][j]);
                 printf("\n");
             }
             printf("\n");
-      }
+        }
     }
     return NULL;
 }
-
 
 void *dummy()
 {
@@ -166,11 +167,13 @@ void *ciclista(void *args)
             if (pos->x == arg->d - 1){
                 velocity = getNewVelocity(velocity);
                 laps++;
-                if (arg->lucky == 1 && (arg->v - laps) == 2)
+                if (arg->lucky == 1 && (arg->v - laps) == 2){
                     velocity = 90;
+                    refresh = MS60;
+                }
                 broken = break_cyclists(laps);
                 if (broken){
-                    printf("O corredor %u quebrou na volta %u, ele possuia  pontos \n", arg->tag, laps);
+                    printf("O corredor %u quebrou na volta %u e ele estava na posição \n", arg->tag, laps);
                 }
             }
         }
@@ -209,13 +212,17 @@ int main(int argc, char **argv)
     uint d = atoi(argv[1]);
     uint n = atoi(argv[2]);
     uint v = atoi(argv[3]);
+    uint debug = 0;
+    if (argc == 5) debug = 1;
     uint lucky = 0;
     pthread_t thread[n + 1];
     int prob, lucky_cyclist;
+
     /* Inicializando variáveis globais. */
     is_over = 0;
     n_cyclists = n;
     thread_arg *args = emalloc(n*sizeof(thread_arg));
+    thread_report_arg *report_args = emalloc(sizeof(thread_report_arg));
     thread_dummy = emalloc(n*sizeof(pthread_t));
     pista = initializeTrack(d, n);
     pthread_mutex_init(&n_cyclists_mutex, NULL);
@@ -227,6 +234,7 @@ int main(int argc, char **argv)
     prob = rand()%100;
     if (prob <= 10)
         lucky = 1;
+
     /* Cria as threads ciclistas. */
     for (uint i = 0; i < n; i++){
         args[i].d = d;
@@ -240,7 +248,9 @@ int main(int argc, char **argv)
     }
 
     /* Cria a thread que realiza o Relatório e o debug da corrida. */
-    pthread_create(&(thread[n + 1]), NULL, &report, &d);
+    report_args->d = d;
+    report_args->debug = debug;
+    pthread_create(&(thread[n + 1]), NULL, &report, report_args);
 
     /* Espera todos os ciclistas terminarem a prova. */
     for (int i = 0; i < n; i++)
