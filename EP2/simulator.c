@@ -112,71 +112,57 @@ int updatePosition(position *pos, int length)
 
 int cmpLaps(const void *a, const void *b)
 {
-	if ((*(rank *) a).laps < (*(rank *) b).laps) return -1;
-  	else if ((*(rank *) a).laps == (*(rank *) b).laps) return 0;
-    return 1;
+    if ((*(rank *) a).laps < (*(rank *) b).laps) return 1;
+    else if ((*(rank *) a).laps == (*(rank *) b).laps) return 0;
+    return -1;
 }
 
 int cmpPos(const void *a, const void *b)
 {
-	if ((*(rank *) a).pos.x < (*(rank *) b).pos.x) return -1;
-  	else if ((*(rank *) a).pos.x == (*(rank *) b).pos.x) return 0;
-    return 1;  
+    if ((*(rank *) a).pos.x < (*(rank *) b).pos.x) return -1;
+    else if ((*(rank *) a).pos.x == (*(rank *) b).pos.x) return 0;
+    return 1;
 }
 
 void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
     rank *temp = emalloc(arg->n*sizeof(rank));
-    
+    int first,last;
+
     while (1) {
         pthread_barrier_wait(&barrier1);
+
         for (int i = 0; i < arg->n; i++){
             temp[i].laps = ranking[i].laps;
             temp[i].pos = ranking[i].pos;
         }
+
         qsort(temp, arg->n, sizeof(rank), cmpLaps);
 
-        printf("\n");
-        for (int i = 0; i < arg->n; i++)
-        	printf("|%u - %u|", temp[i].laps, temp[i].pos.x);
-        printf("\n"); printf("\n");
-
-        int first,last;
         first = last = 0;
-		for (int i = 1; i < arg->n; ++i) {
-  			if (temp[i].laps == temp[i - 1].laps) 
-  				last = i;  
-  			else {
-  				/*
-  				printf("first %d last %d\n", first, last);
-    			qsort (temp + first*sizeof(rank), (last+1) - first, sizeof(rank), cmpPos);
-    			first = i; last = i;
-  				*/
-  				printf("first %d last %d\n", first, last);
-				rank *tempp = emalloc((last - first + 1)*sizeof(rank));
-              	for (int l = 0 ,k = first; k < last + 1; k++, l++)
-                  	tempp[l] = temp[k];
+        for (int i = 1; i < arg->n; ++i) {
+            if (temp[i].laps == temp[i - 1].laps)
+                last = i;
+            else {
+                rank *tempp = emalloc((last - first + 1)*sizeof(rank));
+                for (int l = 0 ,k = first; k < last + 1; k++, l++)
+                tempp[l] = temp[k];
                 qsort(tempp, last - first + 1, sizeof(rank), cmpPos);
-              	for (int k = 0; k < last - first + 1; k++)
-            		printf("|%u - %u| ", tempp[k].laps, tempp[k].pos.x);      	
-              	free(tempp);
-
-              	printf("\n");
-              	
-              	first = i; last = i;
+                for (int k = 0; k < last - first + 1; k++)
+                    printf("|%u - %u| ", tempp[k].laps, tempp[k].pos.x);
+                free(tempp);
+                first = i; last = i;
   			}
-  			printf("first %d last %d\n", first, last);
-			rank *tempp = emalloc((last - first + 1)*sizeof(rank));
-            for (int l = 0 ,k = first; k < last + 1; k++, l++)
-              	tempp[l] = temp[k];
-            qsort(tempp, last - first + 1, sizeof(rank), cmpPos);
-          	for (int k = 0; k < last - first + 1; k++)
-           		printf("|%u - %u| ", tempp[k].laps, tempp[k].pos.x);      	
-           	free(tempp);
-
-           	printf("\n");
-  		}
+        }
+		rank *tempp = emalloc((last - first + 1)*sizeof(rank));
+        for (int l = 0 ,k = first; k < last + 1; k++, l++)
+            tempp[l] = temp[k];
+        qsort(tempp, last - first + 1, sizeof(rank), cmpPos);
+        for (int k = 0; k < last - first + 1; k++)
+            printf("|%u - %u| ", tempp[k].laps, tempp[k].pos.x);
+        free(tempp);
+        printf("\n\n");
 
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
