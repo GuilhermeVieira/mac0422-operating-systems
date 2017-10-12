@@ -10,7 +10,7 @@
 #define MS20  6
 
 typedef struct { uint d, v, tag, lucky;} thread_arg;
-typedef struct { uint d, debug;} thread_report_arg;
+typedef struct { uint d, n, debug;} thread_report_arg;
 
 pthread_mutex_t n_cyclists_mutex;
 pthread_barrier_t barrier1;
@@ -20,6 +20,8 @@ pthread_t *thread_dummy;
 uint n_cyclists = 0;
 int refresh = MS60;
 int is_over;
+position *all_pos;
+uint *all_laps;
 
 int break_cyclists(uint laps)
 {
@@ -111,10 +113,18 @@ int updatePosition(position *pos, int length)
 void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
+    
     while (1) {
         pthread_barrier_wait(&barrier1);
+        printf("\n");
+        for (int i = 0; i < arg->n; i++) 
+        	printf("%u ", all_laps[i]);
+        printf("\n");
+
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
+        
+        /* Imprime a matriz */
         if (arg->debug && n_cyclists > 0) {
             for (int i = 0; i < arg->d; i++) {
                 for (int j = 0; j < LANES; j++)
@@ -177,6 +187,8 @@ void *ciclista(void *args)
                 }
             }
         }
+        all_laps[arg->tag -1] = laps;
+        all_pos[arg->tag -1] = *pos;
 
         pthread_barrier_wait(&barrier1); // Espera todo mundo calcular sua posição.
         updateTrack(pos, old_pos, arg->tag); // Atualiza a posição na pista.
@@ -229,6 +241,8 @@ int main(int argc, char **argv)
     pthread_barrier_init(&barrier1, NULL ,n+1);
     pthread_barrier_init(&barrier2, NULL ,n+1);
     srand(time(NULL));
+    all_laps = emalloc(n*sizeof(uint));
+	all_pos = emalloc(n*sizeof(position));
 
     lucky_cyclist = rand()%n;
     prob = rand()%100;
@@ -249,6 +263,7 @@ int main(int argc, char **argv)
 
     /* Cria a thread que realiza o Relatório e o debug da corrida. */
     report_args->d = d;
+    report_args->n = n;
     report_args->debug = debug;
     pthread_create(&(thread[n + 1]), NULL, &report, report_args);
 
