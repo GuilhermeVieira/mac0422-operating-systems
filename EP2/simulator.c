@@ -124,6 +124,18 @@ int cmpPos(const void *a, const void *b)
     return 1;
 }
 
+void sort_and_print_array(rank *array, int beginning, int end)
+{
+    rank *temp = emalloc((end - beginning + 1)*sizeof(rank));
+    for (int l = 0 ,k = beginning; k < end + 1; k++, l++)
+        temp[l] = array[k];
+    qsort(temp, end - beginning + 1, sizeof(rank), cmpPos);
+    for (int k = 0; k < end - beginning + 1; k++)
+        printf("|%u - %u| ", temp[k].laps, temp[k].pos.x);
+    free(temp);
+    return;
+}
+
 void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
@@ -145,23 +157,11 @@ void *report(void *args)
             if (temp[i].laps == temp[i - 1].laps)
                 last = i;
             else {
-                rank *tempp = emalloc((last - first + 1)*sizeof(rank));
-                for (int l = 0 ,k = first; k < last + 1; k++, l++)
-                tempp[l] = temp[k];
-                qsort(tempp, last - first + 1, sizeof(rank), cmpPos);
-                for (int k = 0; k < last - first + 1; k++)
-                    printf("|%u - %u| ", tempp[k].laps, tempp[k].pos.x);
-                free(tempp);
+                sort_and_print_array(temp, first, last);
                 first = i; last = i;
   			}
         }
-		rank *tempp = emalloc((last - first + 1)*sizeof(rank));
-        for (int l = 0 ,k = first; k < last + 1; k++, l++)
-            tempp[l] = temp[k];
-        qsort(tempp, last - first + 1, sizeof(rank), cmpPos);
-        for (int k = 0; k < last - first + 1; k++)
-            printf("|%u - %u| ", tempp[k].laps, tempp[k].pos.x);
-        free(tempp);
+        sort_and_print_array(temp, first, last);
         printf("\n\n");
 
         if (is_over) break;
@@ -177,6 +177,7 @@ void *report(void *args)
             printf("\n");
         }
     }
+    free(temp);
     return NULL;
 }
 
