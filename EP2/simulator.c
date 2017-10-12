@@ -11,6 +11,7 @@
 
 typedef struct { uint d, v, tag, lucky;} thread_arg;
 typedef struct { uint d, n, debug;} thread_report_arg;
+typedef struct {position pos; uint laps;} rank;
 
 pthread_mutex_t n_cyclists_mutex;
 pthread_barrier_t barrier1;
@@ -20,8 +21,7 @@ pthread_t *thread_dummy;
 uint n_cyclists = 0;
 int refresh = MS60;
 int is_over;
-position *all_pos;
-uint *all_laps;
+rank *ranking;
 
 int break_cyclists(uint laps)
 {
@@ -110,20 +110,33 @@ int updatePosition(position *pos, int length)
     return 1;
 }
 
+int cmpLaps(const void *a, const void *b)
+{
+	if ((*(rank *) a).laps < (*(rank *) b).laps) return -1;
+  	else if ((*(rank *) a).laps == (*(rank *) b).laps) return 0;
+    return 1;
+}
+
 void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
-    
+    rank *temp = emalloc(arg->n*sizeof(rank));
     while (1) {
         pthread_barrier_wait(&barrier1);
+        for (int i = 0; i < arg->n; i++){
+            temp[i].laps = ranking[i].laps;
+            temp[i].pos = ranking[i].pos;
+        }
+        qsort(temp, arg->n, sizeof(rank), cmpLaps);
+
         printf("\n");
-        for (int i = 0; i < arg->n; i++) 
-        	printf("%u ", all_laps[i]);
+        for (int i = 0; i < arg->n; i++)
+        	printf("%u ", temp[i].laps);
         printf("\n");
 
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
-        
+
         /* Imprime a matriz */
         if (arg->debug && n_cyclists > 0) {
             for (int i = 0; i < arg->d; i++) {
@@ -187,8 +200,8 @@ void *ciclista(void *args)
                 }
             }
         }
-        all_laps[arg->tag -1] = laps;
-        all_pos[arg->tag -1] = *pos;
+        ranking[arg->tag -1].laps = laps;
+        ranking[arg->tag -1].pos = *pos;
 
         pthread_barrier_wait(&barrier1); // Espera todo mundo calcular sua posição.
         updateTrack(pos, old_pos, arg->tag); // Atualiza a posição na pista.
@@ -241,8 +254,7 @@ int main(int argc, char **argv)
     pthread_barrier_init(&barrier1, NULL ,n+1);
     pthread_barrier_init(&barrier2, NULL ,n+1);
     srand(time(NULL));
-    all_laps = emalloc(n*sizeof(uint));
-	all_pos = emalloc(n*sizeof(position));
+    ranking = emalloc(n*sizeof(rank));
 
     lucky_cyclist = rand()%n;
     prob = rand()%100;
