@@ -11,7 +11,7 @@
 
 typedef struct { uint d, v, tag, lucky;} thread_arg;
 typedef struct { uint d, n, debug;} thread_report_arg;
-typedef struct {position pos; uint laps;} rank;
+typedef struct {position pos; uint laps, pts, tag, flag;} rank;
 
 pthread_mutex_t n_cyclists_mutex;
 pthread_barrier_t barrier1;
@@ -136,18 +136,31 @@ void sort_and_print_array(rank *array, int beginning, int end)
     return;
 }
 
+void distribute_points(uint *bob)
+{
+    for (int i = 0; i < 5; i++){
+        ranking[bob[i]].pts += i + 1;
+        bob[i] = 0;
+    }
+    return;
+}
+
 void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
     rank *temp = emalloc(arg->n*sizeof(rank));
     int first,last;
-
+    uint bob[5];
+    for (int i = 0; i < 5; i++) bob[i] = 0;
     while (1) {
         pthread_barrier_wait(&barrier1);
 
         for (int i = 0; i < arg->n; i++){
             temp[i].laps = ranking[i].laps;
             temp[i].pos = ranking[i].pos;
+            temp[i].pts = ranking[i].pts;
+            temp[i].flag = ranking[i].flag;
+            temp[i].tag = ranking[i].tag;
         }
 
         qsort(temp, arg->n, sizeof(rank), cmpLaps);
@@ -163,7 +176,29 @@ void *report(void *args)
         }
         sort_and_print_array(temp, first, last);
         printf("\n\n");
-
+        printf("%u %u %u %u %u\n", temp[0].flag, temp[1].flag, temp[2].flag, temp[3].flag, temp[4].flag);
+        if (temp[0].laps%10 == 1 && temp[0].flag == 1){
+            if (bob[0] == 0)
+                bob[0] = temp[0].tag;
+        }
+        if (temp[1].laps%10 == 1 && temp[1].flag == 1){
+            if (bob[1] == 0)
+                bob[1] = temp[1].tag;
+        }
+        if (temp[2].laps%10 == 1 && temp[2].flag == 1){
+            if (bob[2] == 0)
+                bob[2] = temp[2].tag;
+        }
+        if (temp[3].laps%10 == 1 && temp[3].flag == 1){
+            if (bob[3] == 0)
+                bob[3] = temp[3].tag;
+        }
+        if (temp[4].laps%10 == 1 && temp[4].flag == 1){
+            if (bob[4] == 0){
+                bob[4] = temp[4].tag;
+                distribute_points(bob);
+            }
+        }
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
 
@@ -203,9 +238,11 @@ void *ciclista(void *args)
     position *old_pos = emalloc(sizeof(position));
     pos->x = (arg->tag - 1)/10;
     pos->y = (arg->tag - 1)%10;
+    ranking[arg->tag - 1].tag = arg->tag;
 
     /* Loop que simula a corrida. */
     while (laps <= arg->v && !broken){
+        ranking[arg->tag - 1].flag = 0;
         old_pos->x = pos->x;
         old_pos->y = pos->y;
 
@@ -221,6 +258,7 @@ void *ciclista(void *args)
             if (pos->x == arg->d - 1){
                 velocity = getNewVelocity(velocity);
                 laps++;
+                ranking[arg->tag - 1].flag = 1;
                 if (arg->lucky == 1 && (arg->v - laps) == 2){
                     velocity = 90;
                     refresh = MS60;
@@ -313,6 +351,8 @@ int main(int argc, char **argv)
     /* Espera todos os ciclistas terminarem a prova. */
     for (int i = 0; i < n; i++)
         pthread_join(thread[i], NULL); // ACHO QUE TEM QUE ESPERAR A REPORT TAMBÉM!!!
+    for (int i = 0; i < n; i++)
+        printf("ola eu sou o %u e tenho %u pts\n", ranking[i].tag, ranking[i].pts);
 
     free(args);
     destroyTrack(pista, d);
