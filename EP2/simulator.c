@@ -11,7 +11,7 @@
 
 typedef struct { uint d, v, tag, lucky;} thread_arg;
 typedef struct { uint d, n, debug;} thread_report_arg;
-typedef struct {position pos; uint laps, pts, tag;} rank;
+typedef struct {position pos; uint laps, pts, tag; double time_elapsed;} rank;
 
 pthread_mutex_t n_cyclists_mutex;
 pthread_mutex_t check_points;
@@ -241,9 +241,13 @@ void *ciclista(void *args)
     pos->x = (arg->tag - 1)/10;
     pos->y = (arg->tag - 1)%10;
     ranking[arg->tag - 1].tag = arg->tag;
-
+    ranking[arg->tag - 1].time_elapsed = 0;
     /* Loop que simula a corrida. */
     while (laps <= arg->v && !broken){
+        if (refresh == MS60)
+            ranking[arg->tag - 1].time_elapsed += 0.06;
+        else
+            ranking[arg->tag - 1].time_elapsed += 0.02;
         old_pos->x = pos->x;
         old_pos->y = pos->y;
 
@@ -273,11 +277,6 @@ void *ciclista(void *args)
                 	}
                 }
                 pthread_mutex_unlock(&check_points);
-
-                if (arg->lucky == 1 && (arg->v - laps) == 2){
-                    velocity = 90;
-                    refresh = MS60;
-                }
                 broken = break_cyclists(laps);
                 if (broken){
                     printf("O corredor %u quebrou na volta %u e ele estava na posição \n", arg->tag, laps);
@@ -290,6 +289,10 @@ void *ciclista(void *args)
 
 
         pthread_barrier_wait(&barrier1); // Espera todo mundo calcular sua posição.
+        if (arg->lucky == 1 && (arg->v - laps) == 2){
+            velocity = 90;
+            refresh = MS60;
+        }
         updateTrack(pos, old_pos, arg->tag); // Atualiza a posição na pista.
         pthread_barrier_wait(&barrier2); // Espera todo mundo atualizar sua posição na pista.
     }
