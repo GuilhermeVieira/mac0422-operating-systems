@@ -24,7 +24,7 @@ uint n_cyclists = 0;
 int refresh = MS60;
 int is_over;
 rank *ranking;
-uint points_buffer[5];
+uint points_buffer[4];
 
 int break_cyclists(uint laps)
 {
@@ -146,24 +146,11 @@ void sort_range_array(rank *array, int beginning, int end)
 	return;
 }
 
-void distribute_points()
-{
-    for (int i = 1; i < 5; i++){
-        if (i == 1)
-            ranking[points_buffer[i] - 1].pts += 5;
-        else
-            ranking[points_buffer[i] - 1].pts += 5 - i;
-        points_buffer[i] = 0;
-    }
-    points_buffer[0] += 10;
-    return;
-}
-
 void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
     rank *temp = emalloc(arg->n*sizeof(rank));
-    int first, last, i;
+    int first, last;
     uint first_palce = 0;
     int laps_to_points = 1;
 
@@ -197,9 +184,6 @@ void *report(void *args)
             temp[0].pts += 20;
             laps_to_points++;
         }
-
-        for (i = 1; i < 5 && points_buffer[i] != 0; i++) {}
-        if (i == 5) distribute_points();
 
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
@@ -266,15 +250,18 @@ void *ciclista(void *args)
                 laps++;		// CHECAR SE É GARANTIDO QUE O CARA SE MOVEU!
 
                 pthread_mutex_lock(&check_points);
-                if (laps == points_buffer[0]) {
-                	for (int i = 1; i < 5; i++){
-                		if (points_buffer[i] == arg->tag)
-                			break;
-                		else if (points_buffer[i] == 0) {
-                			points_buffer[i] = arg->tag;
-                			break;
-                		}
-                	}
+                for (int k = 0; k < 4; k++){
+                    if (points_buffer[k] == laps){
+                        points_buffer[k] += 10;
+                        if (k == 0){
+                            ranking[arg->tag - 1].pts += 5;
+                            break;
+                        }
+                        else {
+                            ranking[arg->tag - 1].pts += (4 - k);
+                            break;
+                        }
+                    }
                 }
                 pthread_mutex_unlock(&check_points);
                 broken = break_cyclists(laps);
@@ -347,9 +334,8 @@ int main(int argc, char **argv)
     srand(time(NULL));
     ranking = emalloc(n*sizeof(rank));
 
-    points_buffer[0] = 11;
-    for (int i = 1; i < 6; i++)
-    	points_buffer[i] = 0;
+    for (int i = 0; i < 4; i++)
+    	points_buffer[i] = 11;
 
     lucky_cyclist = rand()%n;
     prob = rand()%100;
