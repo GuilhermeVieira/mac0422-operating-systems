@@ -24,7 +24,7 @@ uint n_cyclists = 0;
 int refresh = MS60;
 int is_over;
 rank *ranking;
-uint points_buffer[6];
+uint points_buffer[5];
 
 int break_cyclists(uint laps)
 {
@@ -127,24 +127,32 @@ int cmpPos(const void *a, const void *b)
     return 1;
 }
 
-void sort_and_print_array(rank *array, int beginning, int end)
+int cmpPts(const void *a, const void *b)
+{
+    if ((*(rank *) a).pts < (*(rank *) b).pts) return 1;
+    else if ((*(rank *) a).pts == (*(rank *) b).pts) return 0;
+    return -1;
+}
+
+void sort_range_array(rank *array, int beginning, int end)
 {
 	rank *temp = emalloc((end - beginning + 1)*sizeof(rank));
 	for (int l = 0 ,k = beginning; k < end + 1; k++, l++)
 		temp[l] = array[k];
 	qsort(temp, end - beginning + 1, sizeof(rank), cmpPos);
-	for (int k = 0; k < end - beginning + 1; k++){
+	for (int k = 0; k < end - beginning + 1; k++)
 		array[beginning + k] = temp[k];
-		//printf("|%u - %u| ", temp[k].laps, temp[k].pos.x);
-	}
 	free(temp);
 	return;
 }
 
 void distribute_points()
 {
-    for (int i = 1; i < 6; i++){
-        ranking[points_buffer[i]-1].pts += 6 - i;
+    for (int i = 1; i < 5; i++){
+        if (i == 1)
+            ranking[points_buffer[i] - 1].pts += 5;
+        else
+            ranking[points_buffer[i] - 1].pts += 5 - i;
         points_buffer[i] = 0;
     }
     points_buffer[0] += 10;
@@ -156,6 +164,8 @@ void *report(void *args)
     thread_report_arg *arg = (thread_report_arg *) args;
     rank *temp = emalloc(arg->n*sizeof(rank));
     int first, last, i;
+    uint first_palce = 0;
+    int laps_to_points = 1;
 
     while (1) {
         pthread_barrier_wait(&barrier1);
@@ -174,15 +184,22 @@ void *report(void *args)
             if (temp[i].laps == temp[i - 1].laps)
                 last = i;
             else {
-                sort_and_print_array(temp, first, last);
+                sort_range_array(temp, first, last);
                 first = i; last = i;
   			}
         }
-        sort_and_print_array(temp, first, last);
-        //printf("\n\n");
+        sort_range_array(temp, first, last);
+        if (first_palce != temp[0].tag){
+            first_palce = temp[0].tag;
+            laps_to_points = 1;
+        }
+        if (temp[0].laps > temp[1].laps + laps_to_points && temp[0].pos.x < temp[1].pos.x){
+            temp[0].pts += 20;
+            laps_to_points++;
+        }
 
-        for (i = 1; i < 6 && points_buffer[i] != 0; i++) {}
-        if (i == 6) distribute_points();
+        for (i = 1; i < 5 && points_buffer[i] != 0; i++) {}
+        if (i == 5) distribute_points();
 
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
@@ -240,17 +257,17 @@ void *ciclista(void *args)
         if (updatePos == 0) {
             blocked = updatePosition(pos, arg->d);
             if (pos->x == arg->d - 1) {
-                velocity = getNewVelocity(velocity);
+                if (laps != 0)
+                    velocity = getNewVelocity(velocity);
                 laps++;		// CHECAR SE É GARANTIDO QUE O CARA SE MOVEU!
 
                 pthread_mutex_lock(&check_points);
                 if (laps == points_buffer[0]) {
-                	for (int i = 1; i < 6; i++){
-                		printf("Os cara %u\n", points_buffer[i]);
+                	for (int i = 1; i < 5; i++){
                 		if (points_buffer[i] == arg->tag)
                 			break;
                 		else if (points_buffer[i] == 0) {
-                			points_buffer[i] = arg->tag; 
+                			points_buffer[i] = arg->tag;
                 			break;
                 		}
                 	}
@@ -357,7 +374,7 @@ int main(int argc, char **argv)
     /* Espera todos os ciclistas terminarem a prova. */
     for (int i = 0; i < n+1; i++)
         pthread_join(thread[i], NULL); // ACHO QUE TEM QUE ESPERAR A REPORT TAMBÉM!!!
-    
+
     /*Imprime o ranking */
     for (int i = 0; i < n; i++)
         printf("ola eu sou o %u e tenho %u pts\n", ranking[i].tag, ranking[i].pts);
