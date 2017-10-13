@@ -11,9 +11,11 @@
 
 typedef struct { uint d, v, tag, lucky;} thread_arg;
 typedef struct { uint d, n, debug;} thread_report_arg;
-typedef struct {position pos; uint laps, pts, tag, flag;} rank;
+typedef struct {position pos; uint laps, pts, tag;} rank;
 
 pthread_mutex_t n_cyclists_mutex;
+pthread_mutex_t check_points;
+
 pthread_barrier_t barrier1;
 pthread_barrier_t barrier2;
 pthread_t *thread_dummy;
@@ -22,6 +24,7 @@ uint n_cyclists = 0;
 int refresh = MS60;
 int is_over;
 rank *ranking;
+uint points_buffer[6];
 
 int break_cyclists(uint laps)
 {
@@ -126,22 +129,25 @@ int cmpPos(const void *a, const void *b)
 
 void sort_and_print_array(rank *array, int beginning, int end)
 {
-    rank *temp = emalloc((end - beginning + 1)*sizeof(rank));
-    for (int l = 0 ,k = beginning; k < end + 1; k++, l++)
-        temp[l] = array[k];
-    qsort(temp, end - beginning + 1, sizeof(rank), cmpPos);
-    for (int k = 0; k < end - beginning + 1; k++)
-        printf("|%u - %u| ", temp[k].laps, temp[k].pos.x);
-    free(temp);
-    return;
+	rank *temp = emalloc((end - beginning + 1)*sizeof(rank));
+	for (int l = 0 ,k = beginning; k < end + 1; k++, l++)
+		temp[l] = array[k];
+	qsort(temp, end - beginning + 1, sizeof(rank), cmpPos);
+	for (int k = 0; k < end - beginning + 1; k++){
+		array[beginning + k] = temp[k];
+		//printf("|%u - %u| ", temp[k].laps, temp[k].pos.x);
+	}
+	free(temp);
+	return;
 }
 
-void distribute_points(uint *bob)
+void distribute_points()
 {
-    for (int i = 0; i < 5; i++){
-        ranking[bob[i]].pts += i + 1;
-        bob[i] = 0;
+    for (int i = 1; i < 6; i++){
+        ranking[points_buffer[i]-1].pts += 6 - i;
+        points_buffer[i] = 0;
     }
+    points_buffer[0] += 10;
     return;
 }
 
@@ -149,9 +155,8 @@ void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
     rank *temp = emalloc(arg->n*sizeof(rank));
-    int first,last;
-    uint bob[5];
-    for (int i = 0; i < 5; i++) bob[i] = 0;
+    int first, last, i;
+
     while (1) {
         pthread_barrier_wait(&barrier1);
 
@@ -159,7 +164,6 @@ void *report(void *args)
             temp[i].laps = ranking[i].laps;
             temp[i].pos = ranking[i].pos;
             temp[i].pts = ranking[i].pts;
-            temp[i].flag = ranking[i].flag;
             temp[i].tag = ranking[i].tag;
         }
 
@@ -175,30 +179,11 @@ void *report(void *args)
   			}
         }
         sort_and_print_array(temp, first, last);
-        printf("\n\n");
-        printf("%u %u %u %u %u\n", temp[0].flag, temp[1].flag, temp[2].flag, temp[3].flag, temp[4].flag);
-        if (temp[0].laps%10 == 1 && temp[0].flag == 1){
-            if (bob[0] == 0)
-                bob[0] = temp[0].tag;
-        }
-        if (temp[1].laps%10 == 1 && temp[1].flag == 1){
-            if (bob[1] == 0)
-                bob[1] = temp[1].tag;
-        }
-        if (temp[2].laps%10 == 1 && temp[2].flag == 1){
-            if (bob[2] == 0)
-                bob[2] = temp[2].tag;
-        }
-        if (temp[3].laps%10 == 1 && temp[3].flag == 1){
-            if (bob[3] == 0)
-                bob[3] = temp[3].tag;
-        }
-        if (temp[4].laps%10 == 1 && temp[4].flag == 1){
-            if (bob[4] == 0){
-                bob[4] = temp[4].tag;
-                distribute_points(bob);
-            }
-        }
+        //printf("\n\n");
+
+        for (i = 1; i < 6 && points_buffer[i] != 0; i++) {}
+        if (i == 6) distribute_points();
+
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
 
@@ -242,7 +227,6 @@ void *ciclista(void *args)
 
     /* Loop que simula a corrida. */
     while (laps <= arg->v && !broken){
-        ranking[arg->tag - 1].flag = 0;
         old_pos->x = pos->x;
         old_pos->y = pos->y;
 
@@ -255,10 +239,24 @@ void *ciclista(void *args)
         }
         if (updatePos == 0) {
             blocked = updatePosition(pos, arg->d);
-            if (pos->x == arg->d - 1){
+            if (pos->x == arg->d - 1) {
                 velocity = getNewVelocity(velocity);
-                laps++;
-                ranking[arg->tag - 1].flag = 1;
+                laps++;		// CHECAR SE É GARANTIDO QUE O CARA SE MOVEU!
+
+                pthread_mutex_lock(&check_points);
+                if (laps == points_buffer[0]) {
+                	for (int i = 1; i < 6; i++){
+                		printf("Os cara %u\n", points_buffer[i]);
+                		if (points_buffer[i] == arg->tag)
+                			break;
+                		else if (points_buffer[i] == 0) {
+                			points_buffer[i] = arg->tag; 
+                			break;
+                		}
+                	}
+                }
+                pthread_mutex_unlock(&check_points);
+
                 if (arg->lucky == 1 && (arg->v - laps) == 2){
                     velocity = 90;
                     refresh = MS60;
@@ -271,6 +269,8 @@ void *ciclista(void *args)
         }
         ranking[arg->tag -1].laps = laps;
         ranking[arg->tag -1].pos = *pos;
+
+
 
         pthread_barrier_wait(&barrier1); // Espera todo mundo calcular sua posição.
         updateTrack(pos, old_pos, arg->tag); // Atualiza a posição na pista.
@@ -320,10 +320,16 @@ int main(int argc, char **argv)
     thread_dummy = emalloc(n*sizeof(pthread_t));
     pista = initializeTrack(d, n);
     pthread_mutex_init(&n_cyclists_mutex, NULL);
+    pthread_mutex_init(&check_points, NULL);
+
     pthread_barrier_init(&barrier1, NULL ,n+1);
     pthread_barrier_init(&barrier2, NULL ,n+1);
     srand(time(NULL));
     ranking = emalloc(n*sizeof(rank));
+
+    points_buffer[0] = 11;
+    for (int i = 1; i < 6; i++)
+    	points_buffer[i] = 0;
 
     lucky_cyclist = rand()%n;
     prob = rand()%100;
@@ -346,11 +352,13 @@ int main(int argc, char **argv)
     report_args->d = d;
     report_args->n = n;
     report_args->debug = debug;
-    pthread_create(&(thread[n + 1]), NULL, &report, report_args);
+    pthread_create(&(thread[n]), NULL, &report, report_args);
 
     /* Espera todos os ciclistas terminarem a prova. */
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n+1; i++)
         pthread_join(thread[i], NULL); // ACHO QUE TEM QUE ESPERAR A REPORT TAMBÉM!!!
+    
+    /*Imprime o ranking */
     for (int i = 0; i < n; i++)
         printf("ola eu sou o %u e tenho %u pts\n", ranking[i].tag, ranking[i].pts);
 
