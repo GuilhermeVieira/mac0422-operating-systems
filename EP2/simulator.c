@@ -153,6 +153,7 @@ void *report(void *args)
             temp[i].pts = ranking[i].pts;
             temp[i].tag = ranking[i].tag;
             temp[i].time_elapsed = ranking[i].time_elapsed;
+            temp[i].broken_lap = ranking[i].broken_lap;
         }
 
         qsort(temp, arg->n, sizeof(rank), cmpLaps);
@@ -241,7 +242,11 @@ void *ciclista(void *args)
     pos->x = (arg->tag - 1)/10;
     pos->y = (arg->tag - 1)%10;
     ranking[arg->tag - 1].tag = arg->tag;
+    ranking[arg->tag - 1].pos = *pos;
+    ranking[arg->tag - 1].pts = 0;
     ranking[arg->tag - 1].time_elapsed = 0;
+    ranking[arg->tag - 1].broken_lap = 0;
+    ranking[arg->tag - 1].laps = laps;
     /* Loop que simula a corrida. */
     while (laps <= arg->v && !broken){
         if (refresh == MS60)
@@ -370,8 +375,8 @@ int main(int argc, char **argv)
     pthread_mutex_init(&check_points, NULL);
     pthread_mutex_init(&sem_output, NULL);
 
-    pthread_barrier_init(&barrier1, NULL ,n+1);
-    pthread_barrier_init(&barrier2, NULL ,n+1);
+    pthread_barrier_init(&barrier1, NULL ,n + 1);
+    pthread_barrier_init(&barrier2, NULL ,n + 1);
     srand(time(NULL));
     ranking = emalloc(n*sizeof(rank));
 
@@ -403,7 +408,7 @@ int main(int argc, char **argv)
     pthread_create(&(thread[n]), NULL, &report, report_args);
 
     /* Espera todos os ciclistas terminarem a prova. */
-    for (int i = 0; i < n+1; i++)
+    for (int i = 0; i < n + 1; i++)
         pthread_join(thread[i], NULL); // ACHO QUE TEM QUE ESPERAR A REPORT TAMBÉM!!!
 
     /*Imprime o ranking */
@@ -417,8 +422,15 @@ int main(int argc, char **argv)
         }
     }
     free(args);
-    destroyTrack(pista, d);
+    free(report_args);
     free(ranking);
+    free(thread_dummy);
+    destroyTrack(pista, d);
+    pthread_mutex_destroy(&n_cyclists_mutex);
+    pthread_mutex_destroy(&check_points);
+    pthread_mutex_destroy(&sem_output);
+    pthread_barrier_destroy(&barrier1);
+    pthread_barrier_destroy(&barrier2);
 
     return 0;
 }

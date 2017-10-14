@@ -10,7 +10,6 @@
 
 #define LANES 10
 
-pthread_mutex_t track_mutex;
 uint **pista;
 
 /*Alloca a memória nescessária para armezenar uma matriz d X Lanes, ocupa n
