@@ -3,22 +3,6 @@
 
 #include "track.h"
 
-
-void *emalloc(size_t size)
-{
-    void *pointer;
-    pointer = malloc(size);
-
-    if (pointer == NULL) {
-        fprintf(stderr,
-                "ERRO: Não foi possível alocar memória suficiente.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    else
-        return pointer;
-}
-
 uint **initializeTrack(uint d, uint n)
 {
     uint **new_track;
