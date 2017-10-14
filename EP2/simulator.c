@@ -11,7 +11,7 @@
 
 typedef struct { uint d, v, tag, lucky; } thread_arg;
 typedef struct { uint d, n, debug; } thread_report_arg;
-typedef struct {position pos; uint laps, pts, tag; double time_elapsed; } rank;
+typedef struct {position pos; uint laps, broken_lap, pts, tag; double time_elapsed; } rank;
 typedef struct node { uint lap, vector_size, top; uint *tags_vector; struct node *next; } Cell;
 typedef Cell *List;
 
@@ -353,6 +353,8 @@ void *ciclista(void *args)
                 if (broken){
                     printf("O corredor %u quebrou na volta %u e ele estava na posição \n", arg->tag, laps);
                     ranking[arg->tag -1].time_elapsed = -1;
+                    ranking[arg->tag - 1].broken_lap = laps;
+                    laps = 0;
                 }
             }
         }
@@ -455,7 +457,7 @@ int main(int argc, char **argv)
     for (int i = 0; i < n; i++){
         printf("ola eu sou o ciclista %u e tenho %u pts ", ranking[i].tag, ranking[i].pts);
         if (ranking[i].time_elapsed == -1){
-            printf("e eu quebrei na volta %u \n",ranking[i].laps);
+            printf("e eu quebrei na volta %u \n",ranking[i].broken_lap);
         }
         else{
             printf("e completei a corrida em %f segundos\n", ranking[i].time_elapsed);
