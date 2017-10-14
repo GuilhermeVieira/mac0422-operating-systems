@@ -9,9 +9,11 @@
 #define MS60  2
 #define MS20  6
 
-typedef struct { uint d, v, tag, lucky;} thread_arg;
-typedef struct { uint d, n, debug;} thread_report_arg;
-typedef struct {position pos; uint laps, pts, tag; double time_elapsed;} rank;
+typedef struct { uint d, v, tag, lucky; } thread_arg;
+typedef struct { uint d, n, debug; } thread_report_arg;
+typedef struct {position pos; uint laps, pts, tag; double time_elapsed; } rank;
+typedef struct node { uint lap, vector_size, top; uint *tags_vector; struct node *next; } Cell;
+typedef Cell *List;
 
 pthread_mutex_t n_cyclists_mutex;
 pthread_mutex_t check_points;
@@ -25,6 +27,74 @@ int refresh = MS60;
 int is_over;
 rank *ranking;
 uint points_buffer[4];
+List to_print;
+
+List createList()
+{
+    List root = NULL;
+    return root;
+}
+
+List addList(List root, uint lap, uint tag)
+{
+    if (root == NULL) {
+        root = emalloc(sizeof(Cell));
+        root->tags_vector = emalloc(n_cyclists*sizeof(uint *));
+      	root->vector_size = n_cyclists;
+        for (int i = 1; i < n_cyclists; i++)
+            root->tags_vector[i] = 0;
+      	root->tags_vector[0] = tag;
+      	root->top = 1;
+        root->lap = lap;
+        root->next = NULL;
+        return root;
+    }
+  	if (root->lap != lap){
+      	root->next = addList(root->next, lap, tag);
+    }
+    else {
+        int i;
+        for (i = 0; i < root->vector_size && root->tags_vector[i] != tag && root->tags_vector[i] != 0; i++){}
+      	if (i < root->vector_size && root->tags_vector[i] != tag){
+      		root->tags_vector[i] = tag;
+          	root->top++;
+      	}
+    }
+    return root;
+}
+
+List removeList(List root)
+{
+  	if (root == NULL)
+        return root;
+ 	List temp = root->next;
+  	free(root->tags_vector);
+  	free(root);
+    return temp;
+}
+
+List printLap(List root)
+{
+    if (root == NULL)
+        return NULL;
+    printf("Ordem de chegada na volta %u\n", root->lap);
+    for (int i = 0; i < root->top; i++){
+  		printf("%u ",root->tags_vector[i]);
+    }
+  	printf("\n");
+  	root = removeList(root);
+  	return root;
+}
+
+int inArray (rank *temp, uint x, uint n)
+{
+    uint i = 0;
+    for (; i < n && temp[i].laps != x; i++){}
+    if (i != n && temp[i].laps == x){
+        return 1;
+    }
+    return 0;
+}
 
 int break_cyclists(uint laps)
 {
@@ -153,7 +223,7 @@ void *report(void *args)
     int first, last;
     uint first_palce = 0;
     int laps_to_points = 1;
-
+    uint last_lap = 0;
     while (1) {
         pthread_barrier_wait(&barrier1);
 
@@ -185,6 +255,11 @@ void *report(void *args)
             laps_to_points++;
         }
 
+        if (!inArray(temp, last_lap, arg->n)){
+            to_print = printLap(to_print);
+            last_lap++;
+        }
+
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
 
@@ -199,6 +274,7 @@ void *report(void *args)
         }
     }
     free(temp);
+    pthread_exit(NULL);
     return NULL;
 }
 
@@ -209,6 +285,7 @@ void *dummy()
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
     }
+    pthread_exit(NULL);
     return NULL;
 }
 
@@ -263,6 +340,7 @@ void *ciclista(void *args)
                         }
                     }
                 }
+                to_print = addList(to_print, laps, arg->tag);
                 pthread_mutex_unlock(&check_points);
                 broken = break_cyclists(laps);
                 if (broken){
@@ -297,13 +375,13 @@ void *ciclista(void *args)
 
     /* Cria uma thread dummy para deixar a barreira funcional. */
     pthread_create(&(thread_dummy[arg->tag - 1]), NULL, &dummy, NULL);
-
-    /* Espera a thread dummy acabar, ou seja, a corrida acabou . */
-    pthread_join(thread_dummy[arg->tag - 1], NULL);
+    if (!broken)
+        /* Espera a thread dummy acabar, ou seja, a corrida acabou . */
+        pthread_join(thread_dummy[arg->tag - 1], NULL);
 
     free(pos);
     free(old_pos);
-
+    pthread_exit(NULL);
     return NULL;
 }
 
@@ -325,6 +403,7 @@ int main(int argc, char **argv)
     thread_arg *args = emalloc(n*sizeof(thread_arg));
     thread_report_arg *report_args = emalloc(sizeof(thread_report_arg));
     thread_dummy = emalloc(n*sizeof(pthread_t));
+    to_print = createList();
     pista = initializeTrack(d, n);
     pthread_mutex_init(&n_cyclists_mutex, NULL);
     pthread_mutex_init(&check_points, NULL);
