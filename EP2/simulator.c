@@ -9,7 +9,7 @@
 #define MS60  2
 #define MS20  6
 
-typedef struct { uint d, v, tag, lucky; } thread_arg;
+typedef struct { uint d, n, v, tag, lucky; } thread_arg;
 typedef struct { uint d, n, debug; } thread_report_arg;
 typedef struct {position pos; uint laps, broken_lap, pts, tag; double time_elapsed; } rank;
 typedef struct node { uint lap, vector_size, top; uint *tags_vector; struct node *next; } Cell;
@@ -17,6 +17,7 @@ typedef Cell *List;
 
 pthread_mutex_t n_cyclists_mutex;
 pthread_mutex_t check_points;
+pthread_mutex_t sem_output;
 
 pthread_barrier_t barrier1;
 pthread_barrier_t barrier2;
@@ -77,11 +78,13 @@ List printLap(List root)
 {
     if (root == NULL)
         return NULL;
-    printf("Ordem de chegada na volta %u\n", root->lap);
-    for (int i = 0; i < root->top; i++){
-  		printf("%u ",root->tags_vector[i]);
+    if (root->lap != 1) {
+        printf("Ordem de chegada na volta %u:\n", root->lap - 1);
+        for (int i = 0; i < root->top; i++){
+  		    printf("%u ",root->tags_vector[i]);
+        }
+  	    printf("\n\n");
     }
-  	printf("\n");
   	root = removeList(root);
   	return root;
 }
@@ -256,15 +259,17 @@ void *report(void *args)
         }
 
         if (!inArray(temp, last_lap, arg->n)){
+            pthread_mutex_lock(&sem_output);
             to_print = printLap(to_print);
             if (last_lap%10 == 0 && last_lap != 0){
                 printf("Pontuação após o ultimo ciclista ter completado a volta %u:\n", last_lap);
                 qsort(temp, arg->n, sizeof(rank), cmpPts);
                 for (int i = 0; i < arg->n; i++)
-                    printf("[tag = %u; pts = %u] ", temp[i].tag, temp[i].pts);
+                    printf("[tag = %u; pts = %u]\n", temp[i].tag, temp[i].pts);
                 printf("\n\n");
             }
             last_lap++;
+            pthread_mutex_unlock(&sem_output);
         }
 
         if (is_over) break;
@@ -350,8 +355,7 @@ void *ciclista(void *args)
                 to_print = addList(to_print, laps, arg->tag);
                 pthread_mutex_unlock(&check_points);
                 broken = break_cyclists(laps);
-                if (broken){
-                    printf("O corredor %u quebrou na volta %u e ele estava na posição \n", arg->tag, laps);
+                if (broken) {
                     ranking[arg->tag -1].time_elapsed = -1;
                     ranking[arg->tag - 1].broken_lap = laps;
                     laps = 0;
@@ -367,6 +371,21 @@ void *ciclista(void *args)
         if (arg->lucky == 1 && (arg->v - laps) == 2){
             velocity = 90;
             refresh = MS60;
+        }
+        if (broken) {
+            rank *temp = emalloc(arg->n*sizeof(rank));
+            for (int i = 0; i < arg->n; i++)
+                temp[i] = ranking[i];
+            qsort(temp, arg->n, sizeof(rank), cmpPts);
+            for (int i = 0; i < arg->n; i++) {
+                if (temp[i].tag == arg->tag) {
+                    pthread_mutex_lock(&sem_output);
+                    printf("O corredor %u quebrou na volta %u e ele estava na posição %d\n\n", arg->tag, ranking[arg->tag -1].broken_lap, i+1);
+                    pthread_mutex_unlock(&sem_output);
+                    break;
+                }
+            }
+            free(temp);
         }
         updateTrack(pos, old_pos, arg->tag); // Atualiza a posição na pista.
         pthread_barrier_wait(&barrier2); // Espera todo mundo atualizar sua posição na pista.
@@ -417,6 +436,7 @@ int main(int argc, char **argv)
     pista = initializeTrack(d, n);
     pthread_mutex_init(&n_cyclists_mutex, NULL);
     pthread_mutex_init(&check_points, NULL);
+    pthread_mutex_init(&sem_output, NULL);
 
     pthread_barrier_init(&barrier1, NULL ,n+1);
     pthread_barrier_init(&barrier2, NULL ,n+1);
@@ -435,6 +455,7 @@ int main(int argc, char **argv)
     for (uint i = 0; i < n; i++){
         args[i].d = d;
         args[i].v = v;
+        args[i].n = n;
         args[i].tag = i + 1;
         if (i == lucky_cyclist)
             args[i].lucky = lucky;
@@ -457,10 +478,10 @@ int main(int argc, char **argv)
     for (int i = 0; i < n; i++){
         printf("ola eu sou o ciclista %u e tenho %u pts ", ranking[i].tag, ranking[i].pts);
         if (ranking[i].time_elapsed == -1){
-            printf("e eu quebrei na volta %u \n",ranking[i].broken_lap);
+            printf("e eu quebrei na volta %u \n", ranking[i].broken_lap);
         }
         else{
-            printf("e completei a corrida em %f segundos\n", ranking[i].time_elapsed);
+            printf("e completei a corrida em %.2f segundos\n", ranking[i].time_elapsed);
         }
     }
     free(args);
