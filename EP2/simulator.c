@@ -99,41 +99,66 @@ int getNewVelocity (int velocity)
  */
 int updatePosition(position *pos, int length)
 {
+	position *old_pos = emalloc(sizeof(position));
+	old_pos->x = pos->x;
+    old_pos->y = pos->y;
     int new_pos_x = pos->x - 1;
     int new_pos_y = pos->y;
+    int ret = 0;
     /*Ve se tem que usar a circularidade da pista*/
     if (new_pos_x < 0)
         new_pos_x = length - 1;
 
-    /* Vai pra esquerda e pra frente (diagonal) ultimo if verifica se n é ultrapassagem pela interna */
-    if (pos->y > 0 && pista[pos->x][pos->y - 1] == 0 && pista[new_pos_x][pos->y - 1] == 0 && pista[new_pos_x][pos->y] == 0){
-        pos->x = new_pos_x;
-        pos->y = new_pos_y - 1;
-        return 0;
-    }
+    /* Vê o cara de cima */
+    pthread_mutex_lock(&pista[new_pos_x][pos->y].mutex);
+    if (pista[new_pos_x][pos->y].pos == 0) {
+    	/* Vai pra esquerda e pra frente (diagonal) ultimo if verifica se n é ultrapassagem pela interna */
+	    for (int j = pos->y -1; j >= 0; j--) {
+	    	if (pista[pos->x][j].pos == 0) {
+		    	pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+		    	if (pista[new_pos_x][j].pos == 0)
+		    		new_pos_y = j;
+		    	pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+	    	}
+	    	else
+	    		break;	
+	    }
+	    /* Não deu pra ir pra + interna, vou pra frente */
+	    if (new_pos_y == old_pos->y)
+	    	pos->x = new_pos_x;
+	    pthread_mutex_unlock(&pista[new_pos_x][pos->y].mutex);
+	}
+	else {
+		/*tento ultrapassar */
+		for (int j = pos->y +1; j < LANES; j++) {
+			if (pista[pos->x][j].pos == 0) {
+				pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+				if (pista[new_pos_x][j].pos == 0) {
+					new_pos_y = j;
+					pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+					break;
+				}
+				pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+			}
+			else
+				break;
+		}
+		pthread_mutex_unlock(&pista[new_pos_x][pos->y].mutex);
+		if (new_pos_y == old_pos->y)
+        	new_pos_x = pos->x;
+	}
 
-    /*Ve se pode ir imediatamente para frente*/
-    if (pista[new_pos_x][pos->y] == 0){
-        pos->x = new_pos_x;
-        return 0;
-    }
-    /*Ver se pode ir para ultrapassar pela direita*/
-    else {
-        for (; new_pos_y < LANES; new_pos_y++){
-            if (pista[pos->x][new_pos_y] == 0)
-                if (pista[new_pos_x][new_pos_y] == 0){
-                    pos->x = new_pos_x;
-                    pos->y = new_pos_y;
-                    return 0;
-                }
-                else
-                    continue;
-            else
-                break;
-        }
-    }
+    pos->x = new_pos_x;
+    pos->y = new_pos_y;
     /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
-    return 1;
+    updateTrack(pos, old_pos); // Atualiza a posição na pista.
+
+    pthread_mutex_unlock(&pista[old_pos->x][old_pos->y].mutex); //Unlock na pos antiga
+    
+    if (new_pos_x == old_pos->x && new_pos_y == old_pos->y) ret = 1;
+    free(old_pos);
+
+ 	return ret;
 }
 
 void *report(void *args)
@@ -198,19 +223,24 @@ void *report(void *args)
             last_lap++;
             pthread_mutex_unlock(&sem_output);
         }
-
-        if (is_over) break;
-        pthread_barrier_wait(&barrier2);
-
         /* Imprime a matriz */
         if (arg->debug && n_cyclists > 0) {
+        	pthread_mutex_lock(&sem_output);
             for (int i = 0; i < arg->d; i++) {
-                for (int j = 0; j < LANES; j++)
-                    printf("%d ", pista[i][j]);
+                for (int j = 0; j < LANES; j++) {
+                    if (pista[i][j].pos == 0)
+                    	printf(" -  ");
+                    else
+                    	printf("%3d ", pista[i][j].pos);
+                }
                 printf("\n");
             }
             printf("\n");
+            pthread_mutex_unlock(&sem_output);
         }
+
+        if (is_over) break;
+        pthread_barrier_wait(&barrier2);
     }
 
     free(temp);
@@ -238,7 +268,6 @@ void *ciclista(void *args)
     int blocked = 0; // Vale 1 se o ciclista frente está bloqueando a passagem.
     uint laps = 0;
     position *pos = emalloc(sizeof(position));
-    position *old_pos = emalloc(sizeof(position));
     pos->x = (arg->tag - 1)/10;
     pos->y = (arg->tag - 1)%10;
     ranking[arg->tag - 1].tag = arg->tag;
@@ -253,8 +282,7 @@ void *ciclista(void *args)
             ranking[arg->tag - 1].time_elapsed += 0.06;
         else
             ranking[arg->tag - 1].time_elapsed += 0.02;
-        old_pos->x = pos->x;
-        old_pos->y = pos->y;
+        
 
         /* Calcula a nova posição. */
         if (!blocked) {
@@ -263,6 +291,7 @@ void *ciclista(void *args)
         else {
             updatePos = 0;
         }
+
         if (updatePos == 0) {
             blocked = updatePosition(pos, arg->d);
             if (pos->x == arg->d - 1) {
@@ -297,11 +326,16 @@ void *ciclista(void *args)
                 }
             }
         }
+        else {
+        	pthread_mutex_unlock(&pista[pos->x][pos->y].mutex);
+        }
         ranking[arg->tag -1].laps = laps;
         ranking[arg->tag -1].pos = *pos;
 
         pthread_barrier_wait(&barrier1); // Espera todo mundo calcular sua posição.
 
+        pthread_mutex_lock(&pista[pos->x][pos->y].mutex);
+        
         if (arg->lucky == 1 && (arg->v - laps) == 2){
             velocity = 90;
             refresh = MS60;
@@ -323,13 +357,11 @@ void *ciclista(void *args)
             free(temp);
         }
 
-        updateTrack(pos, old_pos, arg->tag); // Atualiza a posição na pista.
-
         pthread_barrier_wait(&barrier2); // Espera todo mundo atualizar sua posição na pista.
     }
 
     /* Tira o ciclista da pista. */
-    pista[pos->x][pos->y] = 0; // ACHO QUE PRECISA COLOCAR UMAS VERIFICAÇOES PARA NAO SOBRESCREVER
+    pista[pos->x][pos->y].pos = 0; // ACHO QUE PRECISA COLOCAR UMAS VERIFICAÇOES PARA NAO SOBRESCREVER
 
     /* Atualiza o número de ciclistas na pista. */
     pthread_mutex_lock(&n_cyclists_mutex);
@@ -346,7 +378,6 @@ void *ciclista(void *args)
         pthread_join(thread_dummy[arg->tag - 1], NULL);
 
     free(pos);
-    free(old_pos);
     pthread_exit(NULL);
     return NULL;
 }
