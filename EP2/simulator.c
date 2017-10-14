@@ -235,6 +235,7 @@ void *report(void *args)
             temp[i].pos = ranking[i].pos;
             temp[i].pts = ranking[i].pts;
             temp[i].tag = ranking[i].tag;
+            temp[i].time_elapsed = ranking[i].time_elapsed;
         }
 
         qsort(temp, arg->n, sizeof(rank), cmpLaps);
@@ -254,7 +255,7 @@ void *report(void *args)
             laps_to_points = 1;
         }
         if (temp[0].laps > temp[1].laps + laps_to_points && temp[0].pos.x < temp[1].pos.x){
-            temp[0].pts += 20;
+            ranking[0].pts += 20;
             laps_to_points++;
         }
 
@@ -264,8 +265,16 @@ void *report(void *args)
             if (last_lap%10 == 0 && last_lap != 0){
                 printf("Pontuação após o ultimo ciclista ter completado a volta %u:\n", last_lap);
                 qsort(temp, arg->n, sizeof(rank), cmpPts);
-                for (int i = 0; i < arg->n; i++)
-                    printf("[tag = %u; pts = %u]\n", temp[i].tag, temp[i].pts);
+                for (int i = 0; i < arg->n; i++) {
+                    if (temp[i].time_elapsed != -1)
+                        printf("[tag = %u; pts = %u]\n", temp[i].tag, temp[i].pts);
+                }
+
+                for (int i = 0; i < arg->n; i++) {
+                    if (temp[i].time_elapsed == -1)
+                        printf("[tag = %u; QUEBRADO]\n", temp[i].tag);
+                }
+
                 printf("\n\n");
             }
             last_lap++;
@@ -285,6 +294,7 @@ void *report(void *args)
             printf("\n");
         }
     }
+
     free(temp);
     pthread_exit(NULL);
     return NULL;
@@ -292,7 +302,7 @@ void *report(void *args)
 
 void *dummy()
 {
-    while (1){
+    while (1) {
         pthread_barrier_wait(&barrier1); //espera todo mundo atualizar sua pos
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
@@ -358,6 +368,9 @@ void *ciclista(void *args)
                 if (broken) {
                     ranking[arg->tag -1].time_elapsed = -1;
                     ranking[arg->tag - 1].broken_lap = laps;
+                    pthread_mutex_lock(&check_points);
+                    ranking[arg->tag - 1].pts = 0;
+                    pthread_mutex_unlock(&check_points);
                     laps = 0;
                 }
             }
@@ -365,13 +378,13 @@ void *ciclista(void *args)
         ranking[arg->tag -1].laps = laps;
         ranking[arg->tag -1].pos = *pos;
 
-
-
         pthread_barrier_wait(&barrier1); // Espera todo mundo calcular sua posição.
+        
         if (arg->lucky == 1 && (arg->v - laps) == 2){
             velocity = 90;
             refresh = MS60;
         }
+        
         if (broken) {
             rank *temp = emalloc(arg->n*sizeof(rank));
             for (int i = 0; i < arg->n; i++)
@@ -387,7 +400,9 @@ void *ciclista(void *args)
             }
             free(temp);
         }
+        
         updateTrack(pos, old_pos, arg->tag); // Atualiza a posição na pista.
+        
         pthread_barrier_wait(&barrier2); // Espera todo mundo atualizar sua posição na pista.
     }
 
@@ -486,6 +501,7 @@ int main(int argc, char **argv)
     }
     free(args);
     destroyTrack(pista, d);
+    free(ranking);
 
     return 0;
 }
