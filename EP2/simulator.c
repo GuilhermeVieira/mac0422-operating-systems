@@ -257,6 +257,13 @@ void *report(void *args)
 
         if (!inArray(temp, last_lap, arg->n)){
             to_print = printLap(to_print);
+            if (last_lap%10 == 0 && last_lap != 0){
+                printf("Pontuação após o ultimo ciclista ter completado a volta %u:\n", last_lap);
+                qsort(temp, arg->n, sizeof(rank), cmpPts);
+                for (int i = 0; i < arg->n; i++)
+                    printf("[tag = %u; pts = %u] ", temp[i].tag, temp[i].pts);
+                printf("\n\n");
+            }
             last_lap++;
         }
 
@@ -345,6 +352,7 @@ void *ciclista(void *args)
                 broken = break_cyclists(laps);
                 if (broken){
                     printf("O corredor %u quebrou na volta %u e ele estava na posição \n", arg->tag, laps);
+                    ranking[arg->tag -1].time_elapsed = -1;
                 }
             }
         }
@@ -444,9 +452,15 @@ int main(int argc, char **argv)
         pthread_join(thread[i], NULL); // ACHO QUE TEM QUE ESPERAR A REPORT TAMBÉM!!!
 
     /*Imprime o ranking */
-    for (int i = 0; i < n; i++)
-        printf("ola eu sou o %u e tenho %u pts\n", ranking[i].tag, ranking[i].pts);
-
+    for (int i = 0; i < n; i++){
+        printf("ola eu sou o ciclista %u e tenho %u pts ", ranking[i].tag, ranking[i].pts);
+        if (ranking[i].time_elapsed == -1){
+            printf("e eu quebrei na volta %u \n",ranking[i].laps);
+        }
+        else{
+            printf("e completei a corrida em %f segundos\n", ranking[i].time_elapsed);
+        }
+    }
     free(args);
     destroyTrack(pista, d);
 
