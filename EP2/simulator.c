@@ -108,7 +108,8 @@ int updatePosition(position *pos, int length)
     /*Ve se tem que usar a circularidade da pista*/
     if (new_pos_x < 0)
         new_pos_x = length - 1;
-
+    int temp = new_pos_x;
+    int temp2 = pos->y;
     /* Vê o cara de cima */
     pthread_mutex_lock(&pista[new_pos_x][pos->y].mutex);
     if (pista[new_pos_x][pos->y].pos == 0) {
@@ -116,17 +117,22 @@ int updatePosition(position *pos, int length)
 	    for (int j = pos->y -1; j >= 0; j--) {
 	    	if (pista[pos->x][j].pos == 0) {
 		    	pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-		    	if (pista[new_pos_x][j].pos == 0)
+		    	if (pista[new_pos_x][j].pos == 0){
 		    		new_pos_y = j;
+                    break;
+                }
 		    	pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
 	    	}
 	    	else
 	    		break;
 	    }
 	    /* Não deu pra ir pra + interna, vou pra frente */
-	    if (new_pos_y == old_pos->y)
-	    	pos->x = new_pos_x;
-	    pthread_mutex_unlock(&pista[new_pos_x][pos->y].mutex);
+        pos->x = new_pos_x;
+        pos->y = new_pos_y;
+        /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
+        updateTrack(pos, old_pos); // Atualiza a posição na pista.
+        pthread_mutex_unlock(&pista[temp][new_pos_y].mutex);
+        pthread_mutex_unlock(&pista[new_pos_x][temp2].mutex);
 	}
 	else {
 		/*tento ultrapassar */
@@ -135,7 +141,6 @@ int updatePosition(position *pos, int length)
 				pthread_mutex_lock(&pista[new_pos_x][j].mutex);
 				if (pista[new_pos_x][j].pos == 0) {
 					new_pos_y = j;
-					pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
 					break;
 				}
 				pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
@@ -143,15 +148,16 @@ int updatePosition(position *pos, int length)
 			else
 				break;
 		}
-		pthread_mutex_unlock(&pista[new_pos_x][pos->y].mutex);
 		if (new_pos_y == old_pos->y)
         	new_pos_x = pos->x;
+        pos->x = new_pos_x;
+        pos->y = new_pos_y;
+        /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
+        updateTrack(pos, old_pos); // Atualiza a posição na pista.
+        pthread_mutex_unlock(&pista[new_pos_x][new_pos_y].mutex);
+        pthread_mutex_unlock(&pista[temp][temp2].mutex);
 	}
 
-    pos->x = new_pos_x;
-    pos->y = new_pos_y;
-    /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
-    updateTrack(pos, old_pos); // Atualiza a posição na pista.
 
     pthread_mutex_unlock(&pista[old_pos->x][old_pos->y].mutex); //Unlock na pos antiga
 
