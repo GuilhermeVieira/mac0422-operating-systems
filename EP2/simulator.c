@@ -151,49 +151,81 @@ int updatePosition(position *pos, int length)
     }
     else {
 	    pthread_mutex_lock(&pista[new_pos_x][pos->y].mutex);
+	    
 	    if (pista[new_pos_x][pos->y].pos == 0) {
 	    	/* Vai pra esquerda e pra frente (diagonal) ultimo if verifica se n é ultrapassagem pela interna */
 		    for (int j = pos->y -1; j >= 0; j--) {
 		    	if (pista[pos->x][j].pos == 0) {
-			    	pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-			    	if (pista[new_pos_x][j].pos == 0){
-			    		new_pos_y = j;
-	                    break;
-	                }
-			    	pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+		    		if (pista[new_pos_x][j].pos > 0) {
+		    			if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
+					    	pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+					    	if (pista[new_pos_x][j].pos == 0){
+					    		new_pos_y = j;
+			                    break; //cuidar
+			                }
+					    	pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+					    }
+				    }
+				    else { //n tem ninguem em cima
+						pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+						if (pista[new_pos_x][j].pos == 0) {
+							new_pos_y = j;
+							break; //cuidar
+						}
+						pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+				    }
 		    	}
 		    	else
 		    		break;
 		    }
-		    /* Não deu pra ir pra + interna, vou pra frente */
-	        pos->x = new_pos_x;
+		    pos->x = new_pos_x;
 	        pos->y = new_pos_y;
-	        /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
-	        updateTrack(pos, old_pos); // Atualiza a posição na pista.
-	        pthread_mutex_unlock(&pista[temp][new_pos_y].mutex);
+		    if (old_pos->y != new_pos_y) {
+		    	updateTrack(pos, old_pos); // Atualiza a posição na pista.
+	        	pthread_mutex_unlock(&pista[temp][new_pos_y].mutex);
+		    }
+		    else {
+		    	updateTrack(pos, old_pos);
+		    }
 	        pthread_mutex_unlock(&pista[new_pos_x][temp2].mutex);
 		}
+
 		else {
 			/*tento ultrapassar */
-			for (int j = pos->y +1; j < LANES; j++) {
+	    	for (int j = pos->y + 1; j < LANES; j++) {
 				if (pista[pos->x][j].pos == 0) {
-					pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-					if (pista[new_pos_x][j].pos == 0) {
-						new_pos_y = j;
-						break;
+					if (pista[new_pos_x][j].pos > 0) {
+						if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
+							pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+							if (pista[new_pos_x][j].pos == 0) {
+								new_pos_y = j;
+								break; //cuidar
+							}
+							pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+						}
 					}
-					pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+					else {
+						pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+						if (pista[new_pos_x][j].pos == 0) {
+							new_pos_y = j;
+							break; //cuidar
+						}
+						pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+					}
 				}
-				else
+				else 
 					break;
 			}
-			if (new_pos_y == old_pos->y)
-	        	new_pos_x = pos->x;
-	        pos->x = new_pos_x;
-	        pos->y = new_pos_y;
-	        /*não pode se mover para nenhum lugar então tentara se mover na prox iteração*/
-	        updateTrack(pos, old_pos); // Atualiza a posição na pista.
-	        pthread_mutex_unlock(&pista[new_pos_x][new_pos_y].mutex);
+
+			if (new_pos_y != old_pos->y) {
+		  		pos->x = new_pos_x;
+		    	pos->y = new_pos_y;
+		  		updateTrack(pos, old_pos);
+		  		pthread_mutex_unlock(&pista[new_pos_x][new_pos_y].mutex);
+			}
+			else {
+				new_pos_x = pos->x;
+			}	
 	        pthread_mutex_unlock(&pista[temp][temp2].mutex);
 		}
 	}
