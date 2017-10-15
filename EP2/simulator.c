@@ -121,7 +121,7 @@ int updatePosition(position *pos, int length)
 		    	pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
 	    	}
 	    	else
-	    		break;	
+	    		break;
 	    }
 	    /* Não deu pra ir pra + interna, vou pra frente */
 	    if (new_pos_y == old_pos->y)
@@ -154,7 +154,7 @@ int updatePosition(position *pos, int length)
     updateTrack(pos, old_pos); // Atualiza a posição na pista.
 
     pthread_mutex_unlock(&pista[old_pos->x][old_pos->y].mutex); //Unlock na pos antiga
-    
+
     if (new_pos_x == old_pos->x && new_pos_y == old_pos->y) ret = 1;
     free(old_pos);
 
@@ -282,7 +282,7 @@ void *ciclista(void *args)
             ranking[arg->tag - 1].time_elapsed += 0.06;
         else
             ranking[arg->tag - 1].time_elapsed += 0.02;
-        
+
 
         /* Calcula a nova posição. */
         if (!blocked) {
@@ -335,13 +335,14 @@ void *ciclista(void *args)
         pthread_barrier_wait(&barrier1); // Espera todo mundo calcular sua posição.
 
         pthread_mutex_lock(&pista[pos->x][pos->y].mutex);
-        
+
         if (arg->lucky == 1 && (arg->v - laps) == 2){
             velocity = 90;
             refresh = MS60;
         }
 
         if (broken) {
+            pthread_mutex_unlock(&pista[pos->x][pos->y].mutex);
             rank *temp = emalloc(arg->n*sizeof(rank));
             for (int i = 0; i < arg->n; i++)
                 temp[i] = ranking[i];
@@ -354,14 +355,17 @@ void *ciclista(void *args)
                     break;
                 }
             }
+            pista[pos->x][pos->y].pos = 0;
             free(temp);
         }
-
+        if (laps > arg->v && !broken){
+            pthread_mutex_unlock(&pista[pos->x][pos->y].mutex);
+            pista[pos->x][pos->y].pos = 0;
+        }
         pthread_barrier_wait(&barrier2); // Espera todo mundo atualizar sua posição na pista.
     }
 
     /* Tira o ciclista da pista. */
-    pista[pos->x][pos->y].pos = 0; // ACHO QUE PRECISA COLOCAR UMAS VERIFICAÇOES PARA NAO SOBRESCREVER
 
     /* Atualiza o número de ciclistas na pista. */
     pthread_mutex_lock(&n_cyclists_mutex);
