@@ -1,50 +1,48 @@
 // Guilherme Costa Vieira               Nº USP: 9790930
 // Victor Chiaradia Gramuglia Araujo    Nº USP: 9793756
 
-#include <stdlib.h> //atoi(), rand(), srand().
-#include <time.h> //time().
-#include <pthread.h> //pthreads.
+#include <stdlib.h> 
+#include <time.h> 
+#include <pthread.h> 
 #include "globals.h"
 #include "sort.h"
 #include "track.h"
 #include "linked_list.h"
 
-typedef struct { uint d, n, v, tag, lucky; } thread_arg;
-typedef struct { uint d, n, debug; } thread_report_arg;
+typedef struct { uint d, n, v, tag, lucky; } thread_arg; // Arg dos ciclistas.
+typedef struct { uint d, n, debug; } thread_report_arg; // Arg da thread report.
 
-pthread_mutex_t n_cyclists_mutex;
+pthread_mutex_t n_cyclists_mutex; 
 pthread_mutex_t check_points;
 pthread_mutex_t sem_output;
 
 pthread_barrier_t barrier1;
 pthread_barrier_t barrier2;
-pthread_t *thread_dummy;
+pthread_t *thread_dummy; 
 
-int refresh = MS60;
-List to_print;
+int refresh = MS60; // Taxa de atualização do começo da prova.
+List to_print; // Lista para imprimir a pontuação acumulada da prova.
 
-/*Função procura elemento x em um vetor temp de tamanho n. Retorna 1 se x se
- *encontra em temp, 0 caso não se encontre.
- */
+/* Procura elemento x em um vetor temp de tamanho n. Retorna 1 se x se
+ * encontra em temp, 0 caso não se encontre. */
 int inArray (rank *temp, uint x, uint n)
 {
     uint i = 0;
-    for (; i < n && temp[i].laps != x; i++){}
-    if (i != n && temp[i].laps == x){
+    for (; i < n && temp[i].laps != x; i++) {}
+    if (i != n && temp[i].laps == x) {
         return 1;
     }
     return 0;
 }
 
-/*Dado o némero de voltas laps a funçã retorna se o ciclista quebrou ou não ao
- *completar a volta.
- */
+/* Dado o número de voltas laps, retorna se o ciclista quebrou ou não ao
+ * completar a volta. */
 int break_cyclists(uint laps)
 {
     int prob = rand()%100;
-    if (laps%15 == 0 && prob <= 1){
+    if (laps%15 == 0 && prob <= 1) {
         pthread_mutex_lock(&n_cyclists_mutex);
-        if (n_cyclists <= 5){
+        if (n_cyclists <= 5) {
             pthread_mutex_unlock(&n_cyclists_mutex);
             return 0;
         }
@@ -54,9 +52,8 @@ int break_cyclists(uint laps)
     return 0;
 }
 
-/*Dado uma velocidade em Km/h a função ira retornar ela em (m/ms)*dt, onde dt
- *esta está relacionado com o refresh.
- */
+/* Dado uma velocidade em Km/h a função retorna a velocidade em (m/ms)*dt, onde 
+ * dt está relacionado com o refresh rate atual. */
 double velInRefreshTime (int velocity, int refresh)
 {
     /*   Km   1000m   1 hora    1s
@@ -70,8 +67,7 @@ double velInRefreshTime (int velocity, int refresh)
         return (vel/3600)*20;
 }
 
-/*Função retorna a nova velocidade de um ciclista dado sua velocidade antiga.
- */
+/* Retorna a nova velocidade de um ciclista dado sua velocidade antiga. */
 int getNewVelocity (int velocity)
 {
     int prob;
@@ -92,164 +88,184 @@ int getNewVelocity (int velocity)
         return velocity;
 }
 
-/*Dado uma pista global, seu tamanho, e as coordenadas do ciclista que ira se
- *mover (dado por pos). A função ira calcular sua nova posição e ira mudar o
- *argumento pos de acordo, a função retorna 1 se foi póssivel mover o ciclista e
- * 0 se ele estava impedido de fazer qualquer movimento.
- */
+/* Dado uma pista global, seu tamanho, e as coordenadas do ciclista que irá se
+ * mover (dado por pos). A função calcula sua nova posição, chama a updateTrack() 
+ * e muda o argumento pos de acordo. Retorna 0 se foi póssivel mover o ciclista 
+ * e 1 se ele estava impedido de fazer qualquer movimento. É garantido que ao 
+ * entrar nessa função, o ciclista pode avançar uma posição na corrida. */
 int updatePosition(position *pos, int length)
 {
-	position *old_pos = emalloc(sizeof(position));
-	old_pos->x = pos->x;
+    position *old_pos = emalloc(sizeof(position));
+    // Guarda posições antigas.
+    old_pos->x = pos->x; 
     old_pos->y = pos->y;
-    int new_pos_x = pos->x - 1;
+    // Inicializa nova posição.
+    int new_pos_x = pos->x - 1; // O ciclista deve avançar na matriz.
     int new_pos_y = pos->y;
     int ret = 0;
-    /*Ve se tem que usar a circularidade da pista*/
+    // Ajusta a circularidade da pista. 
     if (new_pos_x < 0)
         new_pos_x = length - 1;
-    int temp = new_pos_x;
+    // Guardam a posição logo a frente na matriz.
+    int temp = new_pos_x; 
     int temp2 = pos->y;
-    	/* Vê o cara de cima */
     
-    // Se o cara da frente estiver uma volta atrás tento ultrapassar pela direita.
-    if (pista[new_pos_x][pos->y].pos > 0 && ranking[pista[new_pos_x][pos->y].pos].laps < ranking[pista[old_pos->x][old_pos->y].pos].laps) {
-    	for (int j = pos->y + 1; j < LANES; j++) {
-			if (pista[pos->x][j].pos == 0) {
-				if (pista[new_pos_x][j].pos > 0) {
-					if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
-						pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-						if (pista[new_pos_x][j].pos == 0) {
-							new_pos_y = j;
-							break; //cuidar
-						}
-						pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
-					}
-				}
-				else {
-					pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-					if (pista[new_pos_x][j].pos == 0) {
-						new_pos_y = j;
-						break; //cuidar
-					}
-					pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
-				}
-			}
-			else 
-				break;
-		}
-
-		if (new_pos_y != old_pos->y) {
-	  		pos->x = new_pos_x;
-	    	pos->y = new_pos_y;
-	  		updateTrack(pos, old_pos);
-	  		pthread_mutex_unlock(&pista[new_pos_x][new_pos_y].mutex);
-		}
-		else {
-			new_pos_x = pos->x;
-		}	    	
+    // Verifica se o cara imediatamente a frente está voltas atrás. 
+    if (pista[new_pos_x][pos->y].pos > 0 && 
+        ranking[pista[new_pos_x][pos->y].pos].laps < ranking[pista[old_pos->x][old_pos->y].pos].laps) {
+        
+        // Tenta passar o retardatalho pela pista mais externa.
+        for (int j = pos->y + 1; j < LANES; j++) {
+            if (pista[pos->x][j].pos == 0) {
+                if (pista[new_pos_x][j].pos > 0) {
+                    if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
+                        pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+                        if (pista[new_pos_x][j].pos == 0) {
+                            new_pos_y = j;
+                            break; 
+                        }
+                        pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+                    }
+                }
+                else {
+                    pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+                    if (pista[new_pos_x][j].pos == 0) {
+                        new_pos_y = j;
+                        break; 
+                    }
+                    pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+                }
+            }
+            else 
+                break;
+        }
+        if (new_pos_y != old_pos->y) {
+            // Conseguiu uma posição para passar o retardatalho.
+            pos->x = new_pos_x;
+            pos->y = new_pos_y;
+            updateTrack(pos, old_pos);
+            pthread_mutex_unlock(&pista[new_pos_x][new_pos_y].mutex);
+        }
+        else {
+            // Não conseguiu passar o retardatalho. Reseta new_pos_x.
+            new_pos_x = pos->x;
+        }           
     }
     else {
-	    pthread_mutex_lock(&pista[new_pos_x][pos->y].mutex);
-	    
-	    if (pista[new_pos_x][pos->y].pos == 0) {
-	    	/* Vai pra esquerda e pra frente (diagonal) ultimo if verifica se n é ultrapassagem pela interna */
-		    for (int j = pos->y -1; j >= 0; j--) {
-		    	if (pista[pos->x][j].pos == 0) {
-		    		if (pista[new_pos_x][j].pos > 0) {
-		    			if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
-					    	pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-					    	if (pista[new_pos_x][j].pos == 0){
-					    		new_pos_y = j;
-			                    break; //cuidar
-			                }
-					    	pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
-					    }
-				    }
-				    else { //n tem ninguem em cima
-						pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-						if (pista[new_pos_x][j].pos == 0) {
-							new_pos_y = j;
-							break; //cuidar
-						}
-						pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
-				    }
-		    	}
-		    	else
-		    		break;
-		    }
-		    pos->x = new_pos_x;
-	        pos->y = new_pos_y;
-		    if (old_pos->y != new_pos_y) {
-		    	updateTrack(pos, old_pos); // Atualiza a posição na pista.
-	        	pthread_mutex_unlock(&pista[temp][new_pos_y].mutex);
-		    }
-		    else {
-		    	updateTrack(pos, old_pos);
-		    }
-	        pthread_mutex_unlock(&pista[new_pos_x][temp2].mutex);
-		}
+        // Espera para acessar a posição imediatamente a frente.
+        pthread_mutex_lock(&pista[new_pos_x][pos->y].mutex);
+        
+        // Verifica se existe um ciclista na posição imediatamente há frente.
+        if (pista[new_pos_x][pos->y].pos == 0) {
+            /* A posição imediatamente a frente está vazia. Então tento achar 
+             * uma posição vazia mais interna (diagonal) */
+            for (int j = pos->y -1; j >= 0; j--) {
+                if (pista[pos->x][j].pos == 0) {
+                    if (pista[new_pos_x][j].pos > 0) {
+                        if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
+                            pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+                            if (pista[new_pos_x][j].pos == 0) { 
+                                new_pos_y = j;
+                                break; 
+                            }
+                            pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+                        }
+                    }
+                    else { 
+                        pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+                        if (pista[new_pos_x][j].pos == 0) {
+                            new_pos_y = j;
+                            break; 
+                        }
+                        pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+                    }
+                }
+                else
+                    break;
+            }
+            pos->x = new_pos_x;
+            pos->y = new_pos_y;
 
-		else {
-			/*tento ultrapassar */
-	    	for (int j = pos->y + 1; j < LANES; j++) {
-				if (pista[pos->x][j].pos == 0) {
-					if (pista[new_pos_x][j].pos > 0) {
-						if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
-							pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-							if (pista[new_pos_x][j].pos == 0) {
-								new_pos_y = j;
-								break; //cuidar
-							}
-							pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
-						}
-					}
-					else {
-						pthread_mutex_lock(&pista[new_pos_x][j].mutex);
-						if (pista[new_pos_x][j].pos == 0) {
-							new_pos_y = j;
-							break; //cuidar
-						}
-						pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
-					}
-				}
-				else 
-					break;
-			}
+            if (old_pos->y != new_pos_y) {
+                // Conseguiu uma posição mais interna.
+                updateTrack(pos, old_pos); // Atualiza a posição na pista.
+                pthread_mutex_unlock(&pista[temp][new_pos_y].mutex);
+            }
+            else {
+                // Não conseguiu posição mais interna e portanto só avança.
+                updateTrack(pos, old_pos);
+            }
+            pthread_mutex_unlock(&pista[new_pos_x][temp2].mutex);
+        }
+        else {
+            /* A posição imediatamente a frente está ocupada. Então o ciclista
+             * tenta ultrapassar pela pista mais externa. */ 
+            for (int j = pos->y + 1; j < LANES; j++) {
+                if (pista[pos->x][j].pos == 0) {
+                    if (pista[new_pos_x][j].pos > 0) {
+                        if (ranking[pista[new_pos_x][j].pos].laps == ranking[pista[old_pos->x][old_pos->y].pos].laps) {
+                            pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+                            if (pista[new_pos_x][j].pos == 0) {
+                                new_pos_y = j;
+                                break; 
+                            }
+                            pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+                        }
+                    }
+                    else {
+                        pthread_mutex_lock(&pista[new_pos_x][j].mutex);
+                        if (pista[new_pos_x][j].pos == 0) {
+                            new_pos_y = j;
+                            break; 
+                        }
+                        pthread_mutex_unlock(&pista[new_pos_x][j].mutex);
+                    }
+                }
+                else 
+                    break;
+            }
 
-			if (new_pos_y != old_pos->y) {
-		  		pos->x = new_pos_x;
-		    	pos->y = new_pos_y;
-		  		updateTrack(pos, old_pos);
-		  		pthread_mutex_unlock(&pista[new_pos_x][new_pos_y].mutex);
-			}
-			else {
-				new_pos_x = pos->x;
-			}	
-	        pthread_mutex_unlock(&pista[temp][temp2].mutex);
-		}
-	}
+            if (new_pos_y != old_pos->y) {
+                // Conseguiu ultrapassar pela pista externa.
+                pos->x = new_pos_x;
+                pos->y = new_pos_y;
+                updateTrack(pos, old_pos);
+                pthread_mutex_unlock(&pista[new_pos_x][new_pos_y].mutex);
+            }
+            else {
+                // Não conseguiu ultrapassar. Vai retornar blocked = 1.
+                new_pos_x = pos->x;
+            }   
+            pthread_mutex_unlock(&pista[temp][temp2].mutex);
+        }
+    }
 
     pthread_mutex_unlock(&pista[old_pos->x][old_pos->y].mutex); //Unlock na pos antiga
 
+    // Verifica se o ciclista se moveu ou foi bloqueado.
     if (new_pos_x == old_pos->x && new_pos_y == old_pos->y) ret = 1;
     free(old_pos);
 
- 	return ret;
+    return ret;
 }
 
+/* Thread que imprime a classificação por pontos parcial e a ordem em que os 
+ * ciclistas terminaram uma volta e verifica se algum ciclista conseguiu 
+ * ultrapassar todos os outros mais de uma vez para atribuir uma bonificação 
+ * nos pontos. */
 void *report(void *args)
 {
     thread_report_arg *arg = (thread_report_arg *) args;
     rank *temp = emalloc(arg->n*sizeof(rank));
     int first, last;
-    uint first_palce = 0;
+    uint first_place = 0;
     int laps_to_points = 1;
     uint last_lap = 0;
+
     while (1) {
         pthread_barrier_wait(&barrier1);
-
-        for (int i = 0; i < arg->n; i++){
+        // Inicializa o ranking temporário. 
+        for (int i = 0; i < arg->n; i++) {
             temp[i].laps = ranking[i].laps;
             temp[i].pos = ranking[i].pos;
             temp[i].pts = ranking[i].pts;
@@ -258,7 +274,7 @@ void *report(void *args)
             temp[i].broken_lap = ranking[i].broken_lap;
         }
 
-        qsort(temp, arg->n, sizeof(rank), cmpLaps);
+        qsort(temp, arg->n, sizeof(rank), cmpLaps); // Ordena por voltas.
 
         first = last = 0;
         for (int i = 1; i < arg->n; ++i) {
@@ -267,21 +283,23 @@ void *report(void *args)
             else {
                 sort_range_array(temp, first, last);
                 first = i; last = i;
-  			}
+            }
         }
         sort_range_array(temp, first, last);
-        if (first_palce != temp[0].tag){
-            first_palce = temp[0].tag;
+        if (first_place != temp[0].tag) {
+            first_place = temp[0].tag;
             laps_to_points = 1;
         }
-        if (temp[0].laps > temp[1].laps + laps_to_points && temp[0].pos.x < temp[1].pos.x){
+        if (temp[0].laps > temp[1].laps + laps_to_points && temp[0].pos.x < temp[1].pos.x) {
             ranking[0].pts += 20;
             laps_to_points++;
         }
 
         if (!inArray(temp, last_lap, arg->n)){
             pthread_mutex_lock(&sem_output);
+            // Chama a função que imprime a ordem dos ciclistas que chegaram numa volta.
             to_print = printLap(to_print);
+            // Imprime a classificação dos sprints. 
             if (last_lap%10 == 0 && last_lap != 0){
                 printf("Pontuação após o ultimo ciclista ter completado a volta %u:\n", last_lap);
                 qsort(temp, arg->n, sizeof(rank), cmpPts);
@@ -300,22 +318,22 @@ void *report(void *args)
             last_lap++;
             pthread_mutex_unlock(&sem_output);
         }
-        /* Imprime a matriz */
+        // Imprime a matriz caso o debug esteja ativado.
         if (arg->debug && n_cyclists > 0) {
-        	pthread_mutex_lock(&sem_output);
+            pthread_mutex_lock(&sem_output);
             for (int i = 0; i < arg->d; i++) {
                 for (int j = 0; j < LANES; j++) {
                     if (pista[i][j].pos == 0)
-                    	printf(" -  ");
+                        printf(" -  ");
                     else
-                    	printf("%3d ", pista[i][j].pos);
+                        printf("%3d ", pista[i][j].pos);
                 }
                 printf("\n");
             }
             printf("\n");
             pthread_mutex_unlock(&sem_output);
         }
-
+        // Verifica se a corrida acabou.
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
     }
@@ -325,10 +343,12 @@ void *report(void *args)
     return NULL;
 }
 
+/* Thread dummy para completar a barreira quando os ciclistas terminam a prova
+ * ou quebram. */
 void *dummy()
 {
     while (1) {
-        pthread_barrier_wait(&barrier1); //espera todo mundo atualizar sua pos
+        pthread_barrier_wait(&barrier1);
         if (is_over) break;
         pthread_barrier_wait(&barrier2);
     }
@@ -336,13 +356,14 @@ void *dummy()
     return NULL;
 }
 
+/* Thread que simula um ciclista na corrida. */
 void *ciclista(void *args)
 {
     thread_arg *arg = (thread_arg *) args;
     int broken = 0;
     int velocity = 30;
     int updatePos = 0;
-    int blocked = 0; // Vale 1 se o ciclista frente está bloqueando a passagem.
+    int blocked = 0; // Vale 1 se o ciclista a frente está bloqueando a passagem.
     uint laps = 0;
     position *pos = emalloc(sizeof(position));
     pos->x = (arg->tag - 1)/10;
@@ -353,29 +374,36 @@ void *ciclista(void *args)
     ranking[arg->tag - 1].time_elapsed = 0;
     ranking[arg->tag - 1].broken_lap = 0;
     ranking[arg->tag - 1].laps = laps;
-    /* Loop que simula a corrida. */
+    
+    // Loop que simula a corrida. 
     while (laps <= arg->v && !broken){
+        // Conta o tempo real que se passou desde o início da corrida.
         if (refresh == MS60)
             ranking[arg->tag - 1].time_elapsed += 0.06;
         else
             ranking[arg->tag - 1].time_elapsed += 0.02;
-
-
-        /* Calcula a nova posição. */
+ 
         if (!blocked) {
+            // Acrescenta a velocidade no updatePos.
             updatePos = (updatePos + ((int) (velInRefreshTime(velocity, refresh)*refresh)))%refresh;
         }
         else {
+            // Se estava bloqueado, o ciclista poderá avanaçar.
             updatePos = 0;
         }
 
+        // Quando updatePos é zero, o ciclista pode avançar.
         if (updatePos == 0) {
+            // Atualiza a posição do ciclista. 
             blocked = updatePosition(pos, arg->d);
+            // Completou uma volta. 
             if (pos->x == arg->d - 1) {
+                // Calcula nova velocidade se não está na primeira volta.
                 if (laps != 0)
-                    velocity = getNewVelocity(velocity);
-                laps++;		// CHECAR SE É GARANTIDO QUE O CARA SE MOVEU!
+                    velocity = getNewVelocity(velocity); 
+                laps++; 
 
+                // Verifica se o ciclista ganhou pontos nessa volta e os atribui.
                 pthread_mutex_lock(&check_points);
                 for (int k = 0; k < 4; k++){
                     if (points_buffer[k] == laps){
@@ -392,6 +420,8 @@ void *ciclista(void *args)
                 }
                 to_print = addList(to_print, laps, arg->tag);
                 pthread_mutex_unlock(&check_points);
+                
+                // Verifica se o ciclista quebrou.
                 broken = break_cyclists(laps);
                 if (broken) {
                     ranking[arg->tag -1].time_elapsed = -1;
@@ -404,8 +434,11 @@ void *ciclista(void *args)
             }
         }
         else {
-        	pthread_mutex_unlock(&pista[pos->x][pos->y].mutex);
+            /* Não se moveu, então libera a posição para outro ciclista ver
+             * que ainda está na mesma posição. */ 
+            pthread_mutex_unlock(&pista[pos->x][pos->y].mutex);
         }
+        // Atualiza o ranking. 
         ranking[arg->tag -1].laps = laps;
         ranking[arg->tag -1].pos = *pos;
 
@@ -413,11 +446,13 @@ void *ciclista(void *args)
 
         pthread_mutex_lock(&pista[pos->x][pos->y].mutex);
 
-        if (arg->lucky == 1 && (arg->v - laps) == 2){
+        // Verifica se é o ciclista sortudo que vai andar a 90 km/h.
+        if (arg->lucky == 1 && (arg->v - laps) == 2) {
             velocity = 90;
             refresh = MS60;
         }
 
+        // Se o ciclista quebrou, imprime as informações necessárias.
         if (broken) {
             pthread_mutex_unlock(&pista[pos->x][pos->y].mutex);
             rank *temp = emalloc(arg->n*sizeof(rank));
@@ -427,7 +462,8 @@ void *ciclista(void *args)
             for (int i = 0; i < arg->n; i++) {
                 if (temp[i].tag == arg->tag) {
                     pthread_mutex_lock(&sem_output);
-                    printf("O corredor %u quebrou na volta %u e ele estava na posição %d\n\n", arg->tag, ranking[arg->tag -1].broken_lap, i+1);
+                    printf("O corredor %u quebrou na volta %u e ele estava na posição %d\n\n", 
+                            arg->tag, ranking[arg->tag -1].broken_lap, i+1);
                     pthread_mutex_unlock(&sem_output);
                     break;
                 }
@@ -439,7 +475,7 @@ void *ciclista(void *args)
             pthread_mutex_unlock(&pista[pos->x][pos->y].mutex);
             pista[pos->x][pos->y].pos = 0;
         }
-        pthread_barrier_wait(&barrier2); // Espera todo mundo atualizar sua posição na pista.
+        pthread_barrier_wait(&barrier2); // Espera as impressões acontecerem.
     }
 
     /* Tira o ciclista da pista. */
@@ -470,6 +506,7 @@ int main(int argc, char **argv)
     uint n = atoi(argv[2]);
     uint v = atoi(argv[3]);
     uint debug = 0;
+    uint final_pos = 1;
     if (argc == 5) debug = 1;
     uint lucky = 0;
     pthread_t thread[n + 1];
@@ -493,7 +530,7 @@ int main(int argc, char **argv)
     ranking = emalloc(n*sizeof(rank));
 
     for (int i = 0; i < 4; i++)
-    	points_buffer[i] = 11;
+        points_buffer[i] = 11;
 
     lucky_cyclist = rand()%n;
     prob = rand()%100;
@@ -521,18 +558,28 @@ int main(int argc, char **argv)
 
     /* Espera todos os ciclistas terminarem a prova. */
     for (int i = 0; i < n + 1; i++)
-        pthread_join(thread[i], NULL); // ACHO QUE TEM QUE ESPERAR A REPORT TAMBÉM!!!
+        pthread_join(thread[i], NULL); 
 
-    /*Imprime o ranking */
-    for (int i = 0; i < n; i++){
-        printf("ola eu sou o ciclista %u e tenho %u pts ", ranking[i].tag, ranking[i].pts);
-        if (ranking[i].time_elapsed == -1){
-            printf("e eu quebrei na volta %u \n", ranking[i].broken_lap);
-        }
-        else{
-            printf("e completei a corrida em %.2f segundos\n", ranking[i].time_elapsed);
+    /* Ordena o ranking para a apresentação final. */
+    qsort(ranking, n, sizeof(rank), cmpPts);
+
+    /*Imprime o ranking dos que completaram a prova. */
+    for (int i = 0; i < n; i++) {
+        if (ranking[i].time_elapsed != -1) { 
+            printf("%dº colocado: Ciclista %u terminou com %u pontos em completou a corrida em %.2f segundos\n", 
+                    final_pos, ranking[i].tag, ranking[i].pts, ranking[i].time_elapsed);
+            if (ranking[i].pts > 0) final_pos++;
         }
     }
+
+    for (int i = 0; i < n; i++) {
+        if (ranking[i].time_elapsed == -1){
+            printf("Ciclista %u: Quebrou na volta %u.\n", 
+                    ranking[i].tag, ranking[i].broken_lap);
+        }
+    }
+
+    /* Libera a memória usada. */
     free(args);
     free(report_args);
     free(ranking);

@@ -12,25 +12,25 @@
 #define LANES 10
 
 typedef struct {
-	uint pos;
-	pthread_mutex_t mutex;
+    uint pos;
+    pthread_mutex_t mutex;
 } square;
 
 square **pista;
 pthread_mutex_t track_mutex;
 
-/*Alloca a memória nescessária para armezenar uma matriz d X Lanes, ocupa n
+/*Aloca a memória nescessária para armezenar uma matriz d X Lanes, ocupa n
  *posições com números de 1 até n e o restante com 0's. A função retorna o espaço
  *alocado.
  */
 square **initializeTrack(uint d, uint n);
 
-/*Função ira modificar o conteudo da posição indicada por pos para tag e ira
- *mudar o conteudo da posição indicada por old_pos para 0.
+/*Função irá modificar o conteudo da posição indicada por pos para tag e irá
+ *mudar o conteúdo da posição indicada por old_pos para 0.
  */
 void updateTrack(position *pos, position *old_pos);
 
-/*Função ira liberar a mémoria usada por uma pista d X LANES.
+/*Função irá liberar a memória usada por uma pista d X LANES.
  */
 void destroyTrack(square **track, uint d);
 

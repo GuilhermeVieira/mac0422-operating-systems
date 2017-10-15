@@ -8,26 +8,24 @@
 #include <stdlib.h>
 #include "globals.h"
 
-typedef struct node { uint lap, vector_size, top; uint *tags_vector; struct node *next; } Cell;
+typedef struct node { uint lap, vector_size, top; uint *tags_vector; 
+                    struct node *next; } Cell;
 typedef Cell *List;
 
-/*Função cria uma lista.
- */
+// Cria uma lista.
 List createList();
 
-/*Função adiciona a tag no vetor pertencente ao node da lista ligada representado
- *por lap, se não existir o node é criado. A função devolve o começo da lista.
+/* Adiciona a tag no vetor pertencente ao node da lista ligada representado
+ * por lap, se não existir o node é criado. A função devolve o começo da lista.
  */
 List addList(List root, uint lap, uint tag);
 
-/*Remove o primeiro node da lista, desaloca sua mémoria. A função devolve o novo
- *começo da lista.
- */
+/* Remove o primeiro node da lista, desaloca sua mémoria. A função devolve o novo
+ * começo da lista. */
 List removeList(List root);
 
-/*Função ira imprimir na saída padrão o vetor presente no primeiro node da lista
- *e ira chamar a removeList(). A função retorna o retorno da removeList().
- */
+/* Imprime na saída padrão o vetor presente no primeiro node da lista
+ * e chama a removeList(). A função retorna o retorno da removeList(). */
 List printLap(List root);
 
 #endif

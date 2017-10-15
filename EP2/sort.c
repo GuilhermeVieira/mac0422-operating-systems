@@ -26,12 +26,12 @@ int cmpPts(const void *a, const void *b)
 
 void sort_range_array(rank *array, int beginning, int end)
 {
-	rank *temp = emalloc((end - beginning + 1)*sizeof(rank));
-	for (int l = 0 ,k = beginning; k < end + 1; k++, l++)
-		temp[l] = array[k];
-	qsort(temp, end - beginning + 1, sizeof(rank), cmpPos);
-	for (int k = 0; k < end - beginning + 1; k++)
-		array[beginning + k] = temp[k];
-	free(temp);
-	return;
+    rank *temp = emalloc((end - beginning + 1)*sizeof(rank));
+    for (int l = 0 ,k = beginning; k < end + 1; k++, l++)
+        temp[l] = array[k];
+    qsort(temp, end - beginning + 1, sizeof(rank), cmpPos);
+    for (int k = 0; k < end - beginning + 1; k++)
+        array[beginning + k] = temp[k];
+    free(temp);
+    return;
 }
