@@ -1,5 +1,5 @@
 import sys
-from time import sleep
+import math
 
 class process:
     def __init__(self, t0, tf, b, name) :
@@ -50,34 +50,41 @@ def read_file(sim_parameters, to_arrive, compact) :
     file.close()
     return(tot, vit, s, p)
 
+def best_fit(v_mem, proc) :
+    best = 0
+    n_pages = (math.ceil((proc.b)/s)*s)/p
+    for i in range(len(v_mem)) :
+        if (v_mem[i][0] == -1) :
+            if ((v_mem[i][2] - v_mem[i][1]) >= n_pages) :
+                if (v_mem[i][2] - v_mem[i][1] < v_mem[best][2] - v_mem[best][1]) :
+                    best = i
+                else :
+                    continue
+        else :
+            continue
+    if (v_mem[best][2] - v_mem[best][1] > n_pages) :
+        v_mem.insert(best + 1 ,[-1, v_mem[best][1] + n_pages, v_mem[best][2]])
+    v_mem[best][0], v_mem[best][2] = 0, v_mem[best][1] + n_pages
+
+
 def simulation(sim_parameters) :
     to_arrive = []
     compact = []
     l_procs = []
-    v_mem = []
+    v_mem = [[-1, 0, vit//p]]
     p_mem = []
     time = 0
     tot, vit, s, p = read_file(sim_parameters, to_arrive, compact)
-    print(tot, vit, s, p)
-    for i in to_arrive :
-        i.printProc()
     #agora criar os arquivos de memória
     for i in range (tot//p) :
         p_mem.append(-1)
-    for i in range (vit//p) :
-        v_mem.append(-1)
-    print(p_mem)
-    print(v_mem)
     #começa o loop do processo
     while (to_arrive or l_procs) :
         #colocar os caras da to_arrive na l_procs
         arrive(to_arrive, l_procs, time)
-        for i in to_arrive :
-            i.printProc()
-        print("######")
         for i in l_procs :
-            i.printProc()
-        print("//////")
+            if (i.t0 == time) :
+                best_fit(v_mem, i)
         #percorrer a l_procs para executar os algs
         for i in l_procs :
             if (i.tf == time) :
