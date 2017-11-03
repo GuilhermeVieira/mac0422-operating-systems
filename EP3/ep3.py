@@ -29,11 +29,7 @@ def analyseCommand(command, sim_parameters) :
         print("Comando invalido!")
     return run
 
-def simulation(sim_parameters) :
-    to_arrive = []
-    l_procs = []
-    compact = []
-    time = 0
+def read_file(sim_parameters, to_arrive, compact) :
     file = open(sim_parameters[0], "r")
     line = file.readline()
     tot, vit, s, p = line.split()[0], line.split()[1], line.split()[2], line.split()[3]
@@ -44,6 +40,15 @@ def simulation(sim_parameters) :
         to_arrive.append(process(line.split()[0],line.split()[1],line.split()[2],line.split()[3]))
         for i in range(4, len(line.split()), 2) :
             to_arrive[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
+    file.close()
+    return(tot, vit, s, p)
+
+def simulation(sim_parameters) :
+    to_arrive = []
+    l_procs = []
+    compact = []
+    time = 0
+    tot, vit, s, p = read_file(sim_parameters, to_arrive, compact)
     print(tot, vit, s, p)
     for i in to_arrive :
         i.printProc()
