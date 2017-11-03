@@ -30,14 +30,31 @@ def analyseCommand(command, sim_parameters) :
     return run
 
 def simulation(sim_parameters) :
-    coisas = []
+    to_arrive = []
+    l_procs = []
+    compact = []
+    time = 0
     file = open(sim_parameters[0], "r")
+    line = file.readline()
+    tot, vit, s, p = line.split()[0], line.split()[1], line.split()[2], line.split()[3]
     for line in file :
-        coisas.append(process(line.split()[0],line.split()[1],line.split()[2],line.split()[3]))
+        if (len(line.split()) == 2) :
+            compact.append(line.split()[0])
+            continue
+        to_arrive.append(process(line.split()[0],line.split()[1],line.split()[2],line.split()[3]))
         for i in range(4, len(line.split()), 2) :
-            coisas[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
-    for i in coisas :
+            to_arrive[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
+    print(tot, vit, s, p)
+    for i in to_arrive :
         i.printProc()
+    #agora criar os arquivos de memória
+
+    #começa o loop do processo
+    while (to_arrive or l_procs) :
+        to_arrive.pop()
+        #faz a simulação
+        time += 1
+    return
 
 def main() :
     sim_parameters = ["", 0, 0, 1]
