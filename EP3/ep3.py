@@ -1,5 +1,17 @@
 import sys
 
+class process:
+    def __init__(self, t0, tf, b, name) :
+        self.t0 = t0
+        self.tf = tf
+        self.b = b
+        self.name = name
+        self.times = []
+    def addExec(self, tx, px) :
+        self.times.append((px, tx))
+    def printProc(self) :
+        print(self.t0, self.tf, self.b, self.name, self.times)
+
 def analyseCommand(command, sim_parameters) :
     run = 0
     if (command.split()[0] == "carrega") :
@@ -18,7 +30,14 @@ def analyseCommand(command, sim_parameters) :
     return run
 
 def simulation(sim_parameters) :
-    print(sim_parameters)
+    coisas = []
+    file = open(sim_parameters[0], "r")
+    for line in file :
+        coisas.append(process(line.split()[0],line.split()[1],line.split()[2],line.split()[3]))
+        for i in range(4, len(line.split()), 2) :
+            coisas[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
+    for i in coisas :
+        i.printProc()
 
 def main() :
     sim_parameters = ["", 0, 0, 1]
