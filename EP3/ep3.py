@@ -142,6 +142,33 @@ def worst_fit(v_mem, proc, s, p) :
     glue_mem(v_mem)
     return
 
+def switch_mem_pos(mem, i) :
+    if (i != 0) :
+        mem[i][1] = mem[i-1][2]
+
+    if (i+1 == len(mem)) :
+        mem[i][0] = -1
+    else :
+        mem[i][0] = mem[i+1][0]
+        mem[i][2] = mem[i][1] + mem[i+1][2] - mem[i+1][1]
+
+    return
+
+
+def compact_mem(mem) :
+    i = 0
+    while (i < len(mem) and mem[i][0] != -1):
+        i += 1
+        
+    # Memória toda foi compactada
+    if (i != len(mem)):
+        j = i
+        while (j < len(mem)) :
+            switch_mem_pos(mem, j)
+            j += 1
+        compact_mem(mem[i+1:])
+    return
+
 def simulation(sim_parameters) :
     to_arrive = []
     compact = []
@@ -162,14 +189,18 @@ def simulation(sim_parameters) :
         time += 1
         print(v_mem)
     return
-
-def main() :
-    sim_parameters = ["bob.txt", 1, 1, 1]
+'''
     while(True) :
         print("[ep3] :", end = "")
         command = input()
         if(parse_command(command, sim_parameters)) :
             simulation(sim_parameters)
-    return
+'''
 
+def main() :
+    sim_parameters = ["bob.txt", 1, 1, 1]
+    test = [[-1,0,8],[0,8, 10],[-1,10,20],[0,20,40]]
+    print(test)
+    compact_mem(test)
+    print(test)
 main()
