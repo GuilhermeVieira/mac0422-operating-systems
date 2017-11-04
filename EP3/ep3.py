@@ -165,6 +165,7 @@ def compact_mem(mem) :
         switch_mem_pos(mem, i)
         glue_mem(mem)
         compact_mem(mem[i + 1:])
+    glue_mem(mem)    
     return
 
 def fix_B_T(v_mem, l_procs) :
