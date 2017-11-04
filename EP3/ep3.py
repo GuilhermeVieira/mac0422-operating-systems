@@ -17,7 +17,7 @@ class process:
     def printProc(self) :
         print(self.t0, self.tf, self.b, self.name, self.times)
 
-def analyseCommand(command, sim_parameters) :
+def parse_command(command, sim_parameters) :
     run = 0
     if (command.split()[0] == "carrega") :
         sim_parameters[0] = command.split()[1]
@@ -55,7 +55,7 @@ def remove_procs(l_procs, time, v_mem) :
                         v_mem.insert(j + 1, [0, i.top, v_mem[j][2]])
                     if (v_mem[j][1] < i.base) :
                         v_mem[j][2] = i.base
-                        v_mem.inser(j + 1, [-1, i.base, i.top])
+                        v_mem.insert(j + 1, [-1, i.base, i.top])
                     else :
                         v_mem[j][0], v_mem[j][2] = -1, i.top
             l_procs.remove(i)
@@ -96,7 +96,7 @@ def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
     best = -1
     #acha o número de paginas
-    n_pages = (math.ceil((proc.b)/s)*s)/p
+    n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
     for i in range(len(v_mem)) :
         #procura uma posição sem ninguém
         if (v_mem[i][0] == -1) :
@@ -121,7 +121,7 @@ def worst_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
     worst = -1
     #acha o número de paginas
-    n_pages = (math.ceil((proc.b)/s)*s)/p
+    n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
     for i in range(len(v_mem)) :
         #procura uma posição sem ninguém
         if (v_mem[i][0] == -1) :
@@ -168,7 +168,7 @@ def main() :
     while(True) :
         print("[ep3] :", end = "")
         command = input()
-        if(analyseCommand(command, sim_parameters)) :
+        if(parse_command(command, sim_parameters)) :
             simulation(sim_parameters)
     return
 
