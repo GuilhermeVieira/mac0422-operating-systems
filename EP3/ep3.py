@@ -2,12 +2,13 @@ import sys
 import math
 
 class process:
-    def __init__(self, t0, tf, b, name) :
+    def __init__(self, t0, tf, b, name, pid) :
         self.t0 = t0
         self.tf = tf
         self.b = b
         self.name = name
         self.times = []
+        self.pid = pid
     def addExec(self, tx, px) :
         self.times.append((px, tx))
     def new_base(self, base) :
@@ -62,14 +63,16 @@ def remove_procs(l_procs, time, v_mem) :
     glue_mem(v_mem)
 
 def read_file(sim_parameters, to_arrive, compact) :
+    pid = 0
     file = open(sim_parameters[0], "r")
     line = file.readline()
     tot, vit, s, p = int(line.split()[0]), int(line.split()[1]), int(line.split()[2]), int(line.split()[3])
     for line in file :
         if (len(line.split()) == 2) :
-            compact.append(line.split()[0])
+            compact.append(int(line.split()[0]))
             continue
-        to_arrive.append(process(int(line.split()[0]),int(line.split()[1]),int(line.split()[2]),line.split()[3]))
+        to_arrive.append(process(int(line.split()[0]),int(line.split()[1]),int(line.split()[2]),line.split()[3], pid))
+        pid += 1
         for i in range(4, len(line.split()), 2) :
             to_arrive[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
     file.close()
@@ -114,7 +117,7 @@ def best_fit(v_mem, proc, s, p) :
             continue
     if (v_mem[best][2] - v_mem[best][1] > n_pages) :
         v_mem.insert(best + 1 ,[-1, v_mem[best][1] + n_pages, v_mem[best][2]])
-    v_mem[best][0], v_mem[best][2] = 0, v_mem[best][1] + n_pages
+    v_mem[best][0], v_mem[best][2] = proc.pid, v_mem[best][1] + n_pages
     proc.new_base(v_mem[best][1])
     proc.new_top(v_mem[best][2])
     glue_mem(v_mem)
@@ -139,7 +142,7 @@ def worst_fit(v_mem, proc, s, p) :
             continue
     if (v_mem[worst][2] - v_mem[worst][1] > n_pages) :
         v_mem.insert(worst + 1 ,[-1, v_mem[worst][1] + n_pages, v_mem[worst][2]])
-    v_mem[worst][0], v_mem[worst][2] = 0, v_mem[worst][1] + n_pages
+    v_mem[worst][0], v_mem[worst][2] = proc.pid, v_mem[worst][1] + n_pages
     proc.new_base(v_mem[worst][1])
     proc.new_top(v_mem[worst][2])
     glue_mem(v_mem)
@@ -164,6 +167,13 @@ def compact_mem(mem) :
         compact_mem(mem[i + 1:])
     return
 
+def fix_B_T(v_mem, l_procs) :
+    for i in l_procs :
+        for j in v_mem :
+            if (j[0] == i.pid) :
+                i.base, i.top = j[1], j[2]
+                break
+
 def simulation(sim_parameters) :
     to_arrive = []
     compact = []
@@ -181,6 +191,10 @@ def simulation(sim_parameters) :
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         #percorrer a l_procs para executar os algs
         remove_procs(l_procs, time, v_mem)
+        if (compact and compact[0] == time) :
+            compact_mem(v_mem)
+            fix_B_T(v_mem, l_procs)
+            compact.pop(0)
         time += 1
         print(v_mem)
     return
@@ -193,8 +207,4 @@ def main() :
         if(parse_command(command, sim_parameters)) :
             simulation(sim_parameters)
 
-test = [[-1,0,8],[0,8, 10],[-1,10,20],[0,20,40]]
-print(test)
-compact_mem(test)
-print(test)
 main()
