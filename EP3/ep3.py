@@ -40,6 +40,8 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
             l_procs.append(i)
             if (alg == 1) :
                 best_fit(v_mem, i, s, p)
+            elif (alg == 2) :
+                worst_fit(v_mem, i, s, p)
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
@@ -57,7 +59,23 @@ def remove_procs(l_procs, time, v_mem) :
                     else :
                         v_mem[j][0], v_mem[j][2] = -1, i.top
             l_procs.remove(i)
-    #colocar em função ???        
+    glue_mem(v_mem)
+
+def read_file(sim_parameters, to_arrive, compact) :
+    file = open(sim_parameters[0], "r")
+    line = file.readline()
+    tot, vit, s, p = int(line.split()[0]), int(line.split()[1]), int(line.split()[2]), int(line.split()[3])
+    for line in file :
+        if (len(line.split()) == 2) :
+            compact.append(line.split()[0])
+            continue
+        to_arrive.append(process(int(line.split()[0]),int(line.split()[1]),int(line.split()[2]),line.split()[3]))
+        for i in range(4, len(line.split()), 2) :
+            to_arrive[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
+    file.close()
+    return(tot, vit, s, p)
+
+def glue_mem(v_mem) :
     #rejuntar a mémoria != desfragmentar
     i = 0
     while (i < len(v_mem)) :
@@ -73,20 +91,6 @@ def remove_procs(l_procs, time, v_mem) :
             v_mem.pop(j)
             j -= 1
         i += 1
-
-def read_file(sim_parameters, to_arrive, compact) :
-    file = open(sim_parameters[0], "r")
-    line = file.readline()
-    tot, vit, s, p = int(line.split()[0]), int(line.split()[1]), int(line.split()[2]), int(line.split()[3])
-    for line in file :
-        if (len(line.split()) == 2) :
-            compact.append(line.split()[0])
-            continue
-        to_arrive.append(process(int(line.split()[0]),int(line.split()[1]),int(line.split()[2]),line.split()[3]))
-        for i in range(4, len(line.split()), 2) :
-            to_arrive[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
-    file.close()
-    return(tot, vit, s, p)
 
 def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
@@ -110,21 +114,32 @@ def best_fit(v_mem, proc, s, p) :
     v_mem[best][0], v_mem[best][2] = 0, v_mem[best][1] + n_pages
     proc.new_base(v_mem[best][1])
     proc.new_top(v_mem[best][2])
-    #rejuntar a mémoria != desfragmentar
-    i = 0
-    while (i < len(v_mem)) :
-        j = i
-        #achar a ultima posição consecutiva que é igual i
-        while (j < len(v_mem) and v_mem[i][0] == v_mem[j][0]) :
-            j += 1
-        j -= 1
-        #atualizar a posição final de i
-        v_mem[i][2] = v_mem[j][2]
-        #retirar os elementos imcorporados em i
-        while (j > i) :
-            v_mem.pop(j)
-            j -= 1
-        i += 1
+    glue_mem(v_mem)
+    return
+
+def worst_fit(v_mem, proc, s, p) :
+    #começar com um best que não existe
+    worst = -1
+    #acha o número de paginas
+    n_pages = (math.ceil((proc.b)/s)*s)/p
+    for i in range(len(v_mem)) :
+        #procura uma posição sem ninguém
+        if (v_mem[i][0] == -1) :
+            #ve se tem espaço suficiente
+            if ((v_mem[i][2] - v_mem[i][1]) >= n_pages) :
+                if (worst == -1) :
+                    worst = i
+                #ve se precisa mudar o best
+            elif (v_mem[i][2] - v_mem[i][1] > v_mem[worst][2] - v_mem[worst][1]) :
+                    worst = i
+        else :
+            continue
+    if (v_mem[worst][2] - v_mem[worst][1] > n_pages) :
+        v_mem.insert(worst + 1 ,[-1, v_mem[worst][1] + n_pages, v_mem[worst][2]])
+    v_mem[worst][0], v_mem[worst][2] = 0, v_mem[worst][1] + n_pages
+    proc.new_base(v_mem[worst][1])
+    proc.new_top(v_mem[worst][2])
+    glue_mem(v_mem)
     return
 
 def simulation(sim_parameters) :
@@ -149,7 +164,7 @@ def simulation(sim_parameters) :
     return
 
 def main() :
-    sim_parameters = ["", 1, 1, 1]
+    sim_parameters = ["bob.txt", 1, 1, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
