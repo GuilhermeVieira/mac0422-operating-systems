@@ -30,11 +30,14 @@ def analyseCommand(command, sim_parameters) :
         print("Comando invalido!")
     return run
 
-def arrive(to_arrive, l_procs, time) :
+def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
     for i in to_arrive :
         if (i.t0 == time) :
             l_procs.append(i)
+            if (alg == 1) :
+                best_fit(v_mem, i, s, p)
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
+    return
 
 def read_file(sim_parameters, to_arrive, compact) :
     file = open(sim_parameters[0], "r")
@@ -50,54 +53,74 @@ def read_file(sim_parameters, to_arrive, compact) :
     file.close()
     return(tot, vit, s, p)
 
-def best_fit(v_mem, proc) :
-    best = 0
+def best_fit(v_mem, proc, s, p) :
+    #começar com um best que não existe
+    best = -1
+    #acha o número de paginas
     n_pages = (math.ceil((proc.b)/s)*s)/p
     for i in range(len(v_mem)) :
+        #procura uma posição sem ninguém
         if (v_mem[i][0] == -1) :
+            #ve se tem espaço suficiente
             if ((v_mem[i][2] - v_mem[i][1]) >= n_pages) :
-                if (v_mem[i][2] - v_mem[i][1] < v_mem[best][2] - v_mem[best][1]) :
+                if (best == -1) :
                     best = i
-                else :
-                    continue
+                #ve se precisa mudar o best
+                elif (v_mem[i][2] - v_mem[i][1] < v_mem[best][2] - v_mem[best][1]) :
+                    best = i
         else :
             continue
     if (v_mem[best][2] - v_mem[best][1] > n_pages) :
         v_mem.insert(best + 1 ,[-1, v_mem[best][1] + n_pages, v_mem[best][2]])
     v_mem[best][0], v_mem[best][2] = 0, v_mem[best][1] + n_pages
-
+    #rejuntar a mémoria != desfragmentar
+    i = 0
+    while (i < len(v_mem)) :
+        j = i
+        #achar a ultima posição consecutiva que é igual i
+        while (j < len(v_mem) and v_mem[i][0] == v_mem[j][0]) :
+            j += 1
+        j -= 1
+        #atualizar a posição final de i
+        v_mem[i][2] = v_mem[j][2]
+        #retirar os elementos imcorporados em i
+        while (j > i) :
+            v_mem.pop(j)
+            j -= 1
+        i += 1
+    return
 
 def simulation(sim_parameters) :
     to_arrive = []
     compact = []
     l_procs = []
-    v_mem = [[-1, 0, vit//p]]
     p_mem = []
     time = 0
     tot, vit, s, p = read_file(sim_parameters, to_arrive, compact)
+    v_mem = [[-1, 0, vit//p]]
     #agora criar os arquivos de memória
     for i in range (tot//p) :
         p_mem.append(-1)
     #começa o loop do processo
     while (to_arrive or l_procs) :
         #colocar os caras da to_arrive na l_procs
-        arrive(to_arrive, l_procs, time)
-        for i in l_procs :
-            if (i.t0 == time) :
-                best_fit(v_mem, i)
+        arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         #percorrer a l_procs para executar os algs
         for i in l_procs :
             if (i.tf == time) :
+                #tirar da mémoria
                 l_procs.remove(i)
         time += 1
+        print(v_mem)
     return
 
 def main() :
-    sim_parameters = ["", 0, 0, 1]
+    sim_parameters = ["", 1, 1, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
         if(analyseCommand(command, sim_parameters)) :
             simulation(sim_parameters)
+    return        
 
 main()
