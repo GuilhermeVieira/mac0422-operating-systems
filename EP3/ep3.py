@@ -10,6 +10,10 @@ class process:
         self.times = []
     def addExec(self, tx, px) :
         self.times.append((px, tx))
+    def new_base(self, base) :
+        self.base = base
+    def new_top(self, top) :
+        self.top = top
     def printProc(self) :
         print(self.t0, self.tf, self.b, self.name, self.times)
 
@@ -38,6 +42,37 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
                 best_fit(v_mem, i, s, p)
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
+
+def remove_procs(l_procs, time, v_mem) :
+    for i in l_procs :
+        if (i.tf == time) :
+            j = 0
+            for j in range(len(v_mem)) :
+                if (v_mem[j][1] <= i.base and i.top <= v_mem[j][2]) :
+                    if (v_mem[j][2] > i.top) :
+                        v_mem.insert(j + 1, [0, i.top, v_mem[j][2]])
+                    if (v_mem[j][1] < i.base) :
+                        v_mem[j][2] = i.base
+                        v_mem.inser(j + 1, [-1, i.base, i.top])
+                    else :
+                        v_mem[j][0], v_mem[j][2] = -1, i.top
+            l_procs.remove(i)
+    #colocar em função ???        
+    #rejuntar a mémoria != desfragmentar
+    i = 0
+    while (i < len(v_mem)) :
+        j = i
+        #achar a ultima posição consecutiva que é igual i
+        while (j < len(v_mem) and v_mem[i][0] == v_mem[j][0]) :
+            j += 1
+        j -= 1
+        #atualizar a posição final de i
+        v_mem[i][2] = v_mem[j][2]
+        #retirar os elementos imcorporados em i
+        while (j > i) :
+            v_mem.pop(j)
+            j -= 1
+        i += 1
 
 def read_file(sim_parameters, to_arrive, compact) :
     file = open(sim_parameters[0], "r")
@@ -73,6 +108,8 @@ def best_fit(v_mem, proc, s, p) :
     if (v_mem[best][2] - v_mem[best][1] > n_pages) :
         v_mem.insert(best + 1 ,[-1, v_mem[best][1] + n_pages, v_mem[best][2]])
     v_mem[best][0], v_mem[best][2] = 0, v_mem[best][1] + n_pages
+    proc.new_base(v_mem[best][1])
+    proc.new_top(v_mem[best][2])
     #rejuntar a mémoria != desfragmentar
     i = 0
     while (i < len(v_mem)) :
@@ -106,10 +143,7 @@ def simulation(sim_parameters) :
         #colocar os caras da to_arrive na l_procs
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         #percorrer a l_procs para executar os algs
-        for i in l_procs :
-            if (i.tf == time) :
-                #tirar da mémoria
-                l_procs.remove(i)
+        remove_procs(l_procs, time, v_mem)
         time += 1
         print(v_mem)
     return
@@ -121,6 +155,6 @@ def main() :
         command = input()
         if(analyseCommand(command, sim_parameters)) :
             simulation(sim_parameters)
-    return        
+    return
 
 main()
