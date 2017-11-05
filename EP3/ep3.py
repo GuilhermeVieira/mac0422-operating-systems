@@ -183,10 +183,13 @@ def compact_mem(mem) :
     glue_mem(mem)
     return
 
-def fix_B_T(v_mem, l_procs) :
+def fix_B_T(v_mem, l_procs, p_mem) :
     for i in l_procs :
         for j in v_mem :
             if (j[0] == i.pid) :
+                for k in range(len(p_mem)) :
+                    if (i.base <= p_mem[k] and p_mem[k] <= i.top) :
+                        p_mem[k] -= i.base - j[1]
                 i.base, i.top = j[1], j[2]
                 break
 
@@ -217,10 +220,11 @@ def simulation(sim_parameters) :
         remove_procs(l_procs, time, v_mem)
         if (compact and compact[0] == time) :
             compact_mem(v_mem)
-            fix_B_T(v_mem, l_procs)
+            fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
         time += 1
         print(v_mem)
+        print(p_mem)
     return
 
 def main() :
