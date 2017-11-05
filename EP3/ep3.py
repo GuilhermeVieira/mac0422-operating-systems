@@ -99,11 +99,8 @@ def glue_mem(v_mem) :
         i += 1
 
 def page_fault(pos, proc, p, p_mem) :
-    print(p_mem)
     vit_pos = pos + proc.base*p
     vit_page = math.ceil(vit_pos/p)
-    print(vit_page)
-    print(proc.name, pos)
     if (vit_page in p_mem):
         return 0
     return 1
