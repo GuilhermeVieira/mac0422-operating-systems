@@ -8,13 +8,18 @@ class process:
         self.b = b
         self.name = name
         self.times = []
+        self.loaded = []
         self.pid = pid
-    def addExec(self, tx, px) :
+    def addExec(self, px, tx) :
         self.times.append((px, tx))
     def new_base(self, base) :
         self.base = base
     def new_top(self, top) :
         self.top = top
+    def load(self, page) :
+        self.loaded.append(page)
+    def unload(self, page) :
+        self.loaded.remove(page)
     def printProc(self) :
         print(self.t0, self.tf, self.b, self.name, self.times)
 
@@ -98,6 +103,13 @@ def glue_mem(v_mem) :
             j -= 1
         i += 1
 
+def page_fault(pos, proc, p) :
+    vit_pos = pos + proc.base
+    vit_page = math.ceil(vit_pos/p)
+    if (vit_page in proc.loaded):
+        return 0
+    return 1
+
 def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
     best = -1
@@ -165,7 +177,7 @@ def compact_mem(mem) :
         switch_mem_pos(mem, i)
         glue_mem(mem)
         compact_mem(mem[i + 1:])
-    glue_mem(mem)    
+    glue_mem(mem)
     return
 
 def fix_B_T(v_mem, l_procs) :
@@ -190,7 +202,13 @@ def simulation(sim_parameters) :
     while (to_arrive or l_procs) :
         #colocar os caras da to_arrive na l_procs
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
-        #percorrer a l_procs para executar os algs
+        for i in l_procs :
+            while (i.times and i.times[0][1] == time) :
+                if (page_fault(i.times[0][0], i, p)) :
+                    print("deu page_fault")
+                else :
+                    print("não deu page fault")
+                i.times.pop(0)
         remove_procs(l_procs, time, v_mem)
         if (compact and compact[0] == time) :
             compact_mem(v_mem)
