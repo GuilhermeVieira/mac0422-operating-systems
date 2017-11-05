@@ -8,7 +8,6 @@ class process:
         self.b = b
         self.name = name
         self.times = []
-        self.loaded = []
         self.pid = pid
     def addExec(self, px, tx) :
         self.times.append((px, tx))
@@ -16,10 +15,6 @@ class process:
         self.base = base
     def new_top(self, top) :
         self.top = top
-    def load(self, page) :
-        self.loaded.append(page)
-    def unload(self, page) :
-        self.loaded.remove(page)
     def printProc(self) :
         print(self.t0, self.tf, self.b, self.name, self.times)
 
@@ -103,12 +98,23 @@ def glue_mem(v_mem) :
             j -= 1
         i += 1
 
-def page_fault(pos, proc, p) :
-    vit_pos = pos + proc.base
+def page_fault(pos, proc, p, p_mem) :
+    print(p_mem)
+    vit_pos = pos + proc.base*p
     vit_page = math.ceil(vit_pos/p)
-    if (vit_page in proc.loaded):
+    print(vit_page)
+    print(proc.name, pos)
+    if (vit_page in p_mem):
         return 0
     return 1
+
+def FIFO(p_mem, proc, pos, p) :
+    page = math.ceil((pos + proc.base*p)/p)
+    if (-1 not in p_mem) :
+        p_mem.pop(0)
+        p_mem.append(page)
+    else :
+        p_mem[p_mem.index(-1)] = page
 
 def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
@@ -204,8 +210,10 @@ def simulation(sim_parameters) :
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         for i in l_procs :
             while (i.times and i.times[0][1] == time) :
-                if (page_fault(i.times[0][0], i, p)) :
+                if (page_fault(i.times[0][0], i, p, p_mem)) :
                     print("deu page_fault")
+                    if (sim_parameters[2] == 1) :
+                        FIFO(p_mem, i, i.times[0][0], p)
                 else :
                     print("não deu page fault")
                 i.times.pop(0)
