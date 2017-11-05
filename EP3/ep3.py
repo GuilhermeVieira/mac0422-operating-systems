@@ -46,21 +46,21 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
-def remove_procs(l_procs, time, v_mem) :
+def remove_procs(l_procs, time, v_mem, p_mem) :
     for i in l_procs :
         if (i.tf == time) :
-            j = 0
+            print("Tempo: ", time, "| Removeu processo: ", i.pid)
             for j in range(len(v_mem)) :
-                if (v_mem[j][1] <= i.base and i.top <= v_mem[j][2]) :
-                    if (v_mem[j][2] > i.top) :
-                        v_mem.insert(j + 1, [0, i.top, v_mem[j][2]])
-                    if (v_mem[j][1] < i.base) :
-                        v_mem[j][2] = i.base
-                        v_mem.insert(j + 1, [-1, i.base, i.top])
-                    else :
-                        v_mem[j][0], v_mem[j][2] = -1, i.top
+                if (v_mem[j][0] == i.pid) :
+                    v_mem[j][0] = -1
+
+            for j in range(len(p_mem)) :
+                if (p_mem[j] >= i.base and p_mem[j] <= i.top):
+                    p_mem[j] = -1
             l_procs.remove(i)
     glue_mem(v_mem)
+    
+    return
 
 def read_file(sim_parameters, to_arrive, compact) :
     pid = 0
