@@ -171,7 +171,7 @@ def switch_mem_pos(mem, i) :
     mem[i + 1][1] = mem[i][2]
     return
 
-def compact_mem(mem) :
+def compact_vmem(mem) :
     i = 0
     while (i < len(mem) and mem[i][0] != -1):
         i += 1
@@ -179,9 +179,26 @@ def compact_mem(mem) :
     if (i < len(mem)):
         switch_mem_pos(mem, i)
         glue_mem(mem)
-        compact_mem(mem[i + 1:])
+        compact_vmem(mem[i + 1:])
     glue_mem(mem)
     return
+
+def compact_pmem(mem) :
+    i = 0
+    while (i < len(mem) and mem[i] != -1) :
+        i += 1
+
+    print("ANTES ", mem)
+    if (i < len(mem)) :
+        j = i
+        while (j < len(mem) and mem[j] == -1) :
+            j += 1
+        if (j < len(mem)) :
+            mem[i] = mem[j]
+            mem[j] = -1
+            mem[i+1:] = compact_pmem(mem[i+1:])
+    print("DEPOIS ", mem)
+    return mem
 
 def fix_B_T(v_mem, l_procs, p_mem) :
     for i in l_procs :
@@ -217,13 +234,14 @@ def simulation(sim_parameters) :
                 else :
                     print("não deu page fault")
                 i.times.pop(0)
-        remove_procs(l_procs, time, v_mem)
+        remove_procs(l_procs, time, v_mem, p_mem)
         if (compact and compact[0] == time) :
-            compact_mem(v_mem)
+            compact_vmem(v_mem)
+            compact_pmem(p_mem)
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
         time += 1
-        print(v_mem)
+        #print(v_mem)
         print(p_mem)
     return
 
