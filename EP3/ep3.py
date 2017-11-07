@@ -65,7 +65,7 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, algo) :
                             matrix[j][k] = 0
             l_procs.remove(i)
     glue_mem(v_mem)
-    
+
     return
 
 def read_file(sim_parameters, to_arrive, compact) :
@@ -124,25 +124,24 @@ def FIFO(p_mem, indexes, proc, pos, p) :
 
 def LRU2(p_mem, matrix, proc, pos, p, p_fault) :
     #Se deu page fault
-    print(matrix)
-    page = math.floor((pos + proc.base*p)/p)    
+    page = math.floor((pos + proc.base*p)/p)
     least = [-1, len(matrix[0])]
     if (p_fault) :
         for i in range(len(matrix)) :
             temp = 0
             for j in range(len(matrix[i])) :
-                temp += matrix[i][j]                
+                temp += matrix[i][j]
             if (least[0] == -1 or temp < least[1]) :
                 least[0] = i
                 least[1] = temp
         p_mem[least[0]] = page
-    #Se não deu, atualiza a matrix    
+    #Se não deu, atualiza a matrix
     else :
         least[0] = p_mem.index(page)
     for j in range(len(matrix[least[0]])) :
         matrix[least[0]][j] = 1
     for j in range(len(matrix[least[0]])) :
-        matrix[j][least[0]] = 0    
+        matrix[j][least[0]] = 0
 
 def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
@@ -215,7 +214,7 @@ def compact_vmem(mem) :
     glue_mem(mem)
     return
 
-def compact_pmem(mem, indexes, algo, size) :
+def compact_pmem(mem, indexes, matrix, algo, size) :
     i = 0
     while (i < len(mem) and mem[i] != -1) :
         i += 1
@@ -229,9 +228,12 @@ def compact_pmem(mem, indexes, algo, size) :
             mem[j] = -1
 
             if (algo == 2) :
-                l = indexes.index(j+size)
-                indexes[l] = i+size
-            mem[i+1:] = compact_pmem(mem[i+1:], indexes, algo, i+1)
+                l = indexes.index(j + size)
+                indexes[l] = i + size
+            if (algo == 3) :
+                matrix[i + size] = [l for l in matrix[j + size]]
+                matrix[j + size] = [0 for l in matrix[j + size]]
+            mem[i+1:] = compact_pmem(mem[i+1:], indexes, matrix, algo, i+1)
     return mem
 
 def fix_B_T(v_mem, l_procs, p_mem) :
@@ -245,12 +247,12 @@ def fix_B_T(v_mem, l_procs, p_mem) :
                 break
 
 def simulation(sim_parameters) :
-    to_arrive = [] 
+    to_arrive = []
     compact = []
     l_procs = []
     p_mem = []
     p_mem_indexes = []
-    matrix = []  
+    matrix = []
     time = 0
     tot, vit, s, p = read_file(sim_parameters, to_arrive, compact)
     v_mem = [[-1, 0, vit//p]]
@@ -261,7 +263,7 @@ def simulation(sim_parameters) :
     for i in range(len(p_mem)) :
         matrix.append([])
         for j in range(len(p_mem)) :
-            matrix[i].append(0)    
+            matrix[i].append(0)
 
     #começa o loop do processo
     while (to_arrive or l_procs) :
@@ -275,7 +277,7 @@ def simulation(sim_parameters) :
                     if (sim_parameters[2] == 2) :
                         FIFO(p_mem, p_mem_indexes, i, i.times[0][0], p)
                     elif (sim_parameters[2] == 3) :
-                        LRU2(p_mem, matrix, i, i.times[0][0], p, 1)    
+                        LRU2(p_mem, matrix, i, i.times[0][0], p, 1)
                 else :
                     if (sim_parameters[2] == 3) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 0)
@@ -284,13 +286,17 @@ def simulation(sim_parameters) :
         remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, sim_parameters[2])
         if (compact and compact[0] == time) :
             compact_vmem(v_mem)
-            compact_pmem(p_mem, p_mem_indexes, sim_parameters[2], 0)
+            compact_pmem(p_mem, p_mem_indexes , matrix, sim_parameters[2], 0)
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
         time += 1
         print("VIRTUAL ", v_mem)
         print("FÍSICA " , p_mem)
-        print("INDICES ", p_mem_indexes)
+        if(sim_parameters[2] == 2) :
+            print("INDICES ", p_mem_indexes)
+        if(sim_parameters[2] == 3) :
+            for i in range(len(p_mem)) :
+                print(matrix[i])
         print("=========================================================================")
     return
 
