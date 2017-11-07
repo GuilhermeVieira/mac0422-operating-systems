@@ -46,17 +46,23 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
-def remove_procs(l_procs, time, v_mem, p_mem) :
+def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, algo) :
     for i in l_procs :
-        if (i.tf == time) :
+        #se for == da um bug as vezes !!!
+        if (i.tf <= time) :
             print("Tempo: ", time, "| Removeu processo: ", i.pid)
             for j in range(len(v_mem)) :
                 if (v_mem[j][0] == i.pid) :
                     v_mem[j][0] = -1
 
             for j in range(len(p_mem)) :
-                if (p_mem[j] >= i.base and p_mem[j] <= i.top):
+                if (p_mem[j] >= i.base and p_mem[j] < i.top):
                     p_mem[j] = -1
+                    if (algo == 2) :
+                        indexes.remove(j)
+                    if (algo == 3) :
+                        for k in range(len(p_mem)) :
+                            matrix[j][k] = 0
             l_procs.remove(i)
     glue_mem(v_mem)
     
@@ -100,18 +106,43 @@ def glue_mem(v_mem) :
 
 def page_fault(pos, proc, p, p_mem) :
     vit_pos = pos + proc.base*p
-    vit_page = math.ceil(vit_pos/p)
+    vit_page = math.floor(vit_pos/p)
     if (vit_page in p_mem):
         return 0
     return 1
 
-def FIFO(p_mem, proc, pos, p) :
-    page = math.ceil((pos + proc.base*p)/p)
+def FIFO(p_mem, indexes, proc, pos, p) :
+    page = math.floor((pos + proc.base*p)/p)
     if (-1 not in p_mem) :
-        p_mem.pop(0)
-        p_mem.append(page)
+        i = indexes.pop(0)
+        p_mem[i] = page
+        indexes.append(i)
     else :
-        p_mem[p_mem.index(-1)] = page
+        i = p_mem.index(-1)
+        p_mem[i] = page
+        indexes.append(i)
+
+def LRU2(p_mem, matrix, proc, pos, p, p_fault) :
+    #Se deu page fault
+    print(matrix)
+    page = math.floor((pos + proc.base*p)/p)    
+    least = [-1, len(matrix[0])]
+    if (p_fault) :
+        for i in range(len(matrix)) :
+            temp = 0
+            for j in range(len(matrix[i])) :
+                temp += matrix[i][j]                
+            if (least[0] == -1 or temp < least[1]) :
+                least[0] = i
+                least[1] = temp
+        p_mem[least[0]] = page
+    #Se não deu, atualiza a matrix    
+    else :
+        least[0] = p_mem.index(page)
+    for j in range(len(matrix[least[0]])) :
+        matrix[least[0]][j] = 1
+    for j in range(len(matrix[least[0]])) :
+        matrix[j][least[0]] = 0    
 
 def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
@@ -130,6 +161,7 @@ def best_fit(v_mem, proc, s, p) :
                     best = i
         else :
             continue
+    #Se tiver espaço sobrando marca como vazio
     if (v_mem[best][2] - v_mem[best][1] > n_pages) :
         v_mem.insert(best + 1 ,[-1, v_mem[best][1] + n_pages, v_mem[best][2]])
     v_mem[best][0], v_mem[best][2] = proc.pid, v_mem[best][1] + n_pages
@@ -150,7 +182,7 @@ def worst_fit(v_mem, proc, s, p) :
             if ((v_mem[i][2] - v_mem[i][1]) >= n_pages) :
                 if (worst == -1) :
                     worst = i
-                #ve se precisa mudar o best
+                #ve se precisa mudar o worst
             elif (v_mem[i][2] - v_mem[i][1] > v_mem[worst][2] - v_mem[worst][1]) :
                     worst = i
         else :
@@ -183,12 +215,11 @@ def compact_vmem(mem) :
     glue_mem(mem)
     return
 
-def compact_pmem(mem) :
+def compact_pmem(mem, indexes, algo, size) :
     i = 0
     while (i < len(mem) and mem[i] != -1) :
         i += 1
 
-    print("ANTES ", mem)
     if (i < len(mem)) :
         j = i
         while (j < len(mem) and mem[j] == -1) :
@@ -196,8 +227,11 @@ def compact_pmem(mem) :
         if (j < len(mem)) :
             mem[i] = mem[j]
             mem[j] = -1
-            mem[i+1:] = compact_pmem(mem[i+1:])
-    print("DEPOIS ", mem)
+
+            if (algo == 2) :
+                l = indexes.index(j+size)
+                indexes[l] = i+size
+            mem[i+1:] = compact_pmem(mem[i+1:], indexes, algo, i+1)
     return mem
 
 def fix_B_T(v_mem, l_procs, p_mem) :
@@ -205,48 +239,63 @@ def fix_B_T(v_mem, l_procs, p_mem) :
         for j in v_mem :
             if (j[0] == i.pid) :
                 for k in range(len(p_mem)) :
-                    if (i.base <= p_mem[k] and p_mem[k] <= i.top) :
+                    if (i.base <= p_mem[k] and p_mem[k] < i.top) :
                         p_mem[k] -= i.base - j[1]
                 i.base, i.top = j[1], j[2]
                 break
 
 def simulation(sim_parameters) :
-    to_arrive = []
+    to_arrive = [] 
     compact = []
     l_procs = []
     p_mem = []
+    p_mem_indexes = []
+    matrix = []  
     time = 0
     tot, vit, s, p = read_file(sim_parameters, to_arrive, compact)
     v_mem = [[-1, 0, vit//p]]
+
     #agora criar os arquivos de memória
-    for i in range (tot//p) :
+    for i in range(tot//p) :
         p_mem.append(-1)
+    for i in range(len(p_mem)) :
+        matrix.append([])
+        for j in range(len(p_mem)) :
+            matrix[i].append(0)    
+
     #começa o loop do processo
     while (to_arrive or l_procs) :
         #colocar os caras da to_arrive na l_procs
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         for i in l_procs :
             while (i.times and i.times[0][1] == time) :
+
                 if (page_fault(i.times[0][0], i, p, p_mem)) :
                     print("deu page_fault")
-                    if (sim_parameters[2] == 1) :
-                        FIFO(p_mem, i, i.times[0][0], p)
+                    if (sim_parameters[2] == 2) :
+                        FIFO(p_mem, p_mem_indexes, i, i.times[0][0], p)
+                    elif (sim_parameters[2] == 3) :
+                        LRU2(p_mem, matrix, i, i.times[0][0], p, 1)    
                 else :
+                    if (sim_parameters[2] == 3) :
+                        LRU2(p_mem, matrix, i, i.times[0][0], p, 0)
                     print("não deu page fault")
                 i.times.pop(0)
-        remove_procs(l_procs, time, v_mem, p_mem)
+        remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, sim_parameters[2])
         if (compact and compact[0] == time) :
             compact_vmem(v_mem)
-            compact_pmem(p_mem)
+            compact_pmem(p_mem, p_mem_indexes, sim_parameters[2], 0)
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
         time += 1
-        #print(v_mem)
-        print(p_mem)
+        print("VIRTUAL ", v_mem)
+        print("FÍSICA " , p_mem)
+        print("INDICES ", p_mem_indexes)
+        print("=========================================================================")
     return
 
 def main() :
-    sim_parameters = ["bob.txt", 1, 1, 1]
+    sim_parameters = ["bob.txt", 1, 3, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()

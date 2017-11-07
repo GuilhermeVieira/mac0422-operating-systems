@@ -1,8 +1,8 @@
 64 128 8 16
-0 4 9 proc1 4 1 8 4
-3 10 80 proc2 8 10 10 10
-3 12 20 proc3 0 3 18 5
+0 4 9 proc0 4 1 8 4
+3 10 80 proc1 8 10 10 10
+3 12 18 proc2 0 3 15 5
 4 COMPACTAR
 10 COMPACTAR
-5 15 6 proc4 4 10
+5 15 6 proc3 4 10
 14 COMPACTAR
