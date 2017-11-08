@@ -1,0 +1,10 @@
+-Ver o path do arquivo que esta sendo carregado
+-fazer o quickFit
+-fazer o Optimal
+-acabar o LRU4:
+    -Colocar o bit R em algum lugar
+    -Mudar a compression da v_mem
+-Novos testes/ ver se os antigos são bons
+-Arquivos de memória e ver como vai comprimir eles
+-Um bug que aconteceu quando muitos (+-4) procs acabavam ao mesmo Tempo
+-Ver se dá certo quando a p_mem esta cheia
