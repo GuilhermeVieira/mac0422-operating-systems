@@ -46,7 +46,7 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
-def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, algo) :
+def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
     for i in l_procs :
         #se for == da um bug as vezes !!!
         if (i.tf <= time) :
@@ -65,7 +65,7 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, algo) :
                             matrix[j][k] = 0
                     else :
                         for k in range(len(p_mem)) :
-                            matrix[j][k] = 0
+                            count[j][k] = 0
             l_procs.remove(i)
     glue_mem(v_mem)
 
@@ -147,13 +147,13 @@ def LRU2(p_mem, matrix, proc, pos, p, p_fault) :
         matrix[j][least[0]] = 0
 
 def LRU4(p_mem, count, proc, pos, p, p_fault) :
-    #ver mudanças nescessárias para o bit R
+    #ver mudanças nescessárias para o bit R, falta dar um shift quando dá p_fault
     page = math.floor((pos + proc.base*p)/p)
-    least = [-1, len(matrix[0])]
+    least = [-1, len(count[0])]
     if (p_fault) :
         for i in range(len(count)) :
             temp = 0
-            for j in range(len(count[i])) :
+            for j in range(1, len(count[i])) :
                 temp += count[i][j]
                 if (least[0] == -1 or temp < least[1]) :
                     least[0] = i
@@ -162,11 +162,12 @@ def LRU4(p_mem, count, proc, pos, p, p_fault) :
         for j in range(len(count[least[0]])) :
             count[least[0]][j] = 0
         count[least[0]][0] = 1
+        count[least[0]][1] = 1
     else :
         for i in range(len(count)) :
-            for j in range(len(count[i]) - 1) :
+            #ou é 0 ou -1 ou 1
+            for j in range(len(count[i]) - 2, -1, -1) :
                 count[i][j + 1] = count[i][j]
-            #count[i][0] = o bit R que eu não sei onde colocar
 
 def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
@@ -322,12 +323,16 @@ def simulation(sim_parameters) :
                         LRU4(p_mem, count, i, i.times[0][0], p, 0)
 
                 i.times.pop(0)
-        remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, sim_parameters[2])
+        remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, count, sim_parameters[2])
         if (compact and compact[0] == time) :
             compact_vmem(v_mem)
             compact_pmem(p_mem, p_mem_indexes , matrix, sim_parameters[2], 0)
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
+        #atualizar o bit R
+        if (sim_parameters[2] == 4 and time%sim_parameters[3] == 0) :
+            for i in range(len(count)):
+                count[i][0] = 0
         time += 1
         print("VIRTUAL ", v_mem)
         print("FÍSICA " , p_mem)
@@ -343,7 +348,7 @@ def simulation(sim_parameters) :
     return
 
 def main() :
-    sim_parameters = ["bob.txt", 1, 3, 1]
+    sim_parameters = ["bob.txt", 1, 4, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
