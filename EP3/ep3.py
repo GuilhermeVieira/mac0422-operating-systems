@@ -240,7 +240,7 @@ def compact_vmem(mem) :
     glue_mem(mem)
     return
 
-def compact_pmem(mem, indexes, matrix, algo, size) :
+def compact_pmem(mem, indexes, matrix, count, algo, size) :
     i = 0
     while (i < len(mem) and mem[i] != -1) :
         i += 1
@@ -257,13 +257,13 @@ def compact_pmem(mem, indexes, matrix, algo, size) :
                 l = indexes.index(j + size)
                 indexes[l] = i + size
             if (algo == 3) :
-                matrix[i + size] = [l for l in matrix[j + size]]
-                matrix[j + size] = [0 for l in matrix[j + size]]
+                count[i + size] = [l for l in count[j + size]]
+                count[j + size] = [0 for l in count[j + size]]
             if (algo == 4) :
                 #ver se realmente é igual ao de cima
-                matrix[i + size] = [l for l in matrix[j + size]]
-                matrix[j + size] = [0 for l in matrix[j + size]]
-            mem[i+1:] = compact_pmem(mem[i+1:], indexes, matrix, algo, i+1)
+                count[i + size] = [l for l in count[j + size]]
+                count[j + size] = [0 for l in count[j + size]]
+            mem[i+1:] = compact_pmem(mem[i+1:], indexes, matrix, count, algo, i+1)
     return mem
 
 def fix_B_T(v_mem, l_procs, p_mem) :
@@ -326,7 +326,7 @@ def simulation(sim_parameters) :
         remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, count, sim_parameters[2])
         if (compact and compact[0] == time) :
             compact_vmem(v_mem)
-            compact_pmem(p_mem, p_mem_indexes , matrix, sim_parameters[2], 0)
+            compact_pmem(p_mem, p_mem_indexes , matrix, count, sim_parameters[2], 0)
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
         #atualizar o bit R
