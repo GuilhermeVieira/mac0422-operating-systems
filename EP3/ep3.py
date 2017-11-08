@@ -35,6 +35,7 @@ def parse_command(command, sim_parameters) :
         print("Comando invalido!")
     return run
 
+#Transfere todos os processos que tem t0 == time da to_arrive para a l_procs.
 def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
     for i in to_arrive :
         if (i.t0 == time) :
@@ -46,6 +47,8 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
+#Remove da l_procs todos os processos com tf == time e tira eles da v_mem, p_mem,
+#e a estrutura adicional usada pelos alg's de page_fault.
 def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
     for i in l_procs :
         #se for == da um bug as vezes !!!
@@ -87,6 +90,7 @@ def read_file(sim_parameters, to_arrive, compact) :
     file.close()
     return(tot, vit, s, p)
 
+#Junta todas as partes vazias concecutivas da memória.
 def glue_mem(v_mem) :
     #rejuntar a mémoria != desfragmentar
     i = 0
@@ -107,6 +111,7 @@ def glue_mem(v_mem) :
             j -= 1
         i += 1
 
+#A função vê se a página que contem a posição p se encontra na p_mem.
 def page_fault(pos, proc, p, p_mem) :
     vit_pos = pos + proc.base*p
     vit_page = math.floor(vit_pos/p)
@@ -266,6 +271,7 @@ def compact_pmem(mem, indexes, matrix, count, algo, size) :
             mem[i+1:] = compact_pmem(mem[i+1:], indexes, matrix, count, algo, i+1)
     return mem
 
+#Se houve uma compactação a base e o topo de um processo deve ser alterado.
 def fix_B_T(v_mem, l_procs, p_mem) :
     for i in l_procs :
         for j in v_mem :
