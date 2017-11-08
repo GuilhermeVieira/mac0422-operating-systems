@@ -355,7 +355,7 @@ def simulation(sim_parameters) :
     return
 
 def main() :
-    sim_parameters = ["bob.txt", 1, 4, 1]
+    sim_parameters = ["big_bob.txt", 1, 2, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
