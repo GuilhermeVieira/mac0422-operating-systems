@@ -50,9 +50,9 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
 #Remove da l_procs todos os processos com tf == time e tira eles da v_mem, p_mem,
 #e a estrutura adicional usada pelos alg's de page_fault.
 def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
+    to_remove = []
     for i in l_procs :
-        #se for == da um bug as vezes !!!
-        if (i.tf <= time) :
+        if (i.tf == time) :
             print("Tempo: ", time, "| Removeu processo: ", i.pid)
             for j in range(len(v_mem)) :
                 if (v_mem[j][0] == i.pid) :
@@ -69,7 +69,9 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
                     else :
                         for k in range(len(p_mem)) :
                             count[j][k] = 0
-            l_procs.remove(i)
+            to_remove.append(i)
+    for j in to_remove :
+        l_procs.remove(j)
     glue_mem(v_mem)
 
     return
@@ -155,6 +157,10 @@ def LRU4(p_mem, count, proc, pos, p, p_fault) :
     #ver mudanças nescessárias para o bit R, falta dar um shift quando dá p_fault
     page = math.floor((pos + proc.base*p)/p)
     least = [-1, len(count[0])]
+    for i in range(len(count)) :
+        #ou é 0 ou -1 ou 1
+        for j in range(len(count[i]) - 2, -1, -1) :
+            count[i][j + 1] = count[i][j]
     if (p_fault) :
         for i in range(len(count)) :
             temp = 0
@@ -168,11 +174,6 @@ def LRU4(p_mem, count, proc, pos, p, p_fault) :
             count[least[0]][j] = 0
         count[least[0]][0] = 1
         count[least[0]][1] = 1
-    else :
-        for i in range(len(count)) :
-            #ou é 0 ou -1 ou 1
-            for j in range(len(count[i]) - 2, -1, -1) :
-                count[i][j + 1] = count[i][j]
 
 def best_fit(v_mem, proc, s, p) :
     #começar com um best que não existe
