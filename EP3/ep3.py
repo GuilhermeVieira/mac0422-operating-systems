@@ -257,8 +257,8 @@ def compact_pmem(mem, indexes, matrix, count, algo, size) :
                 l = indexes.index(j + size)
                 indexes[l] = i + size
             if (algo == 3) :
-                count[i + size] = [l for l in count[j + size]]
-                count[j + size] = [0 for l in count[j + size]]
+                matrix[i + size] = [l for l in matrix[j + size]]
+                matrix[j + size] = [0 for l in matrix[j + size]]
             if (algo == 4) :
                 #ver se realmente é igual ao de cima
                 count[i + size] = [l for l in count[j + size]]
