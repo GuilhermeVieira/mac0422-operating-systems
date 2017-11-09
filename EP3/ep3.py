@@ -178,9 +178,9 @@ def LRU4(p_mem, count, proc, pos, p, p_fault) :
             temp = 0
             for j in range(1, len(count[i])) :
                 temp += count[i][j]
-                if (least[0] == -1 or temp < least[1]) :
-                    least[0] = i
-                    least[1] = temp
+            if (least[0] == -1 or temp < least[1]) :
+                least[0] = i
+                least[1] = temp
         p_mem[least[0]] = page
         for j in range(len(count[least[0]])) :
             count[least[0]][j] = 0
@@ -226,7 +226,7 @@ def worst_fit(v_mem, proc, s, p) :
                 if (worst == -1) :
                     worst = i
                 #ve se precisa mudar o worst.
-            elif (v_mem[i][2] - v_mem[i][1] > v_mem[worst][2] - v_mem[worst][1]) :
+                elif (v_mem[i][2] - v_mem[i][1] > v_mem[worst][2] - v_mem[worst][1]) :
                     worst = i
         else :
             continue
