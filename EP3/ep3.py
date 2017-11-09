@@ -13,11 +13,14 @@ class process:
         self.times.append((px, tx))
     def new_base(self, base) :
         self.base = base
+    #acho que é inuti agora
     def new_top(self, top) :
         self.top = top
+    #metodo usado para debug
     def printProc(self) :
         print(self.t0, self.tf, self.b, self.name, self.times)
 
+#Processa o comando dado como input.
 def parse_command(command, sim_parameters) :
     run = 0
     if (command.split()[0] == "carrega") :
@@ -40,6 +43,8 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
     for i in to_arrive :
         if (i.t0 == time) :
             l_procs.append(i)
+            #Como os processos já chegaram vamos usar os alg's de fit para alocar
+            #os espaço nescessário na memória virtual.
             if (alg == 1) :
                 best_fit(v_mem, i, s, p)
             elif (alg == 2) :
@@ -54,13 +59,16 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
     for i in l_procs :
         if (i.tf == time) :
             print("Tempo: ", time, "| Removeu processo: ", i.pid)
+            #Retirar o processo da memória virtual.
             for j in range(len(v_mem)) :
                 if (v_mem[j][0] == i.pid) :
                     v_mem[j][0] = -1
-
             for j in range(len(p_mem)) :
+                #Retirar o processe da memória física.
                 if (p_mem[j] >= i.base and p_mem[j] < i.top):
                     p_mem[j] = -1
+                    #Remover a página das estruturas adicionais usadas pelos alg's
+                    #de page_fault
                     if (algo == 2) :
                         indexes.remove(j)
                     elif (algo == 3) :
@@ -76,6 +84,7 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
 
     return
 
+#Transfere do arquivo de trace para a to_arrive e compact.
 def read_file(sim_parameters, to_arrive, compact) :
     pid = 0
     file = open(sim_parameters[0], "r")
@@ -101,13 +110,13 @@ def glue_mem(v_mem) :
             i += 1
             continue
         j = i
-        #achar a ultima posição consecutiva que é igual i
+        #achar a ultima posição consecutiva com -1.
         while (j < len(v_mem) and v_mem[i][0] == v_mem[j][0]) :
             j += 1
         j -= 1
         #atualizar a posição final de i
         v_mem[i][2] = v_mem[j][2]
-        #retirar os elementos imcorporados em i
+        #retirar os elementos incorporados em i
         while (j > i) :
             v_mem.pop(j)
             j -= 1
@@ -123,17 +132,18 @@ def page_fault(pos, proc, p, p_mem) :
 
 def FIFO(p_mem, indexes, proc, pos, p) :
     page = math.floor((pos + proc.base*p)/p)
+    #Coloca a nova página na posição presente no começo da indexes.
     if (-1 not in p_mem) :
         i = indexes.pop(0)
         p_mem[i] = page
         indexes.append(i)
+    #Se houver uma posição vazia coloca nela.
     else :
         i = p_mem.index(-1)
         p_mem[i] = page
         indexes.append(i)
 
 def LRU2(p_mem, matrix, proc, pos, p, p_fault) :
-    #Se deu page fault
     page = math.floor((pos + proc.base*p)/p)
     least = [-1, len(matrix[0])]
     if (p_fault) :
@@ -145,22 +155,24 @@ def LRU2(p_mem, matrix, proc, pos, p, p_fault) :
                 least[0] = i
                 least[1] = temp
         p_mem[least[0]] = page
-    #Se não deu, atualiza a matrix
     else :
         least[0] = p_mem.index(page)
+    #Atualiza a matriz.
     for j in range(len(matrix[least[0]])) :
         matrix[least[0]][j] = 1
     for j in range(len(matrix[least[0]])) :
         matrix[j][least[0]] = 0
 
 def LRU4(p_mem, count, proc, pos, p, p_fault) :
-    #ver mudanças nescessárias para o bit R, falta dar um shift quando dá p_fault
+    #ver mudanças nescessárias para o bit R, falta dar um shift quando dá p_fault.
     page = math.floor((pos + proc.base*p)/p)
     least = [-1, len(count[0])]
+    #Atualiza os contadores.
     for i in range(len(count)) :
         #ou é 0 ou -1 ou 1
         for j in range(len(count[i]) - 2, -1, -1) :
             count[i][j + 1] = count[i][j]
+    #Procura a página que sera substituida.
     if (p_fault) :
         for i in range(len(count)) :
             temp = 0
@@ -176,18 +188,18 @@ def LRU4(p_mem, count, proc, pos, p, p_fault) :
         count[least[0]][1] = 1
 
 def best_fit(v_mem, proc, s, p) :
-    #começar com um best que não existe
+    #começar com um best que não existe.
     best = -1
-    #acha o número de paginas
+    #acha o número de paginas do processo.
     n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
     for i in range(len(v_mem)) :
-        #procura uma posição sem ninguém
+        #procura uma posição sem ninguém.
         if (v_mem[i][0] == -1) :
-            #ve se tem espaço suficiente
+            #ve se tem espaço suficiente.
             if ((v_mem[i][2] - v_mem[i][1]) >= n_pages) :
                 if (best == -1) :
                     best = i
-                #ve se precisa mudar o best
+                #ve se precisa mudar o best.
                 elif (v_mem[i][2] - v_mem[i][1] < v_mem[best][2] - v_mem[best][1]) :
                     best = i
         else :
@@ -202,18 +214,18 @@ def best_fit(v_mem, proc, s, p) :
     return
 
 def worst_fit(v_mem, proc, s, p) :
-    #começar com um best que não existe
+    #começar com um worst que não existe.
     worst = -1
-    #acha o número de paginas
+    #acha o número de paginas usadas pelo processo.
     n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
     for i in range(len(v_mem)) :
-        #procura uma posição sem ninguém
+        #procura uma posição sem ninguém.
         if (v_mem[i][0] == -1) :
-            #ve se tem espaço suficiente
+            #ve se tem espaço suficiente.
             if ((v_mem[i][2] - v_mem[i][1]) >= n_pages) :
                 if (worst == -1) :
                     worst = i
-                #ve se precisa mudar o worst
+                #ve se precisa mudar o worst.
             elif (v_mem[i][2] - v_mem[i][1] > v_mem[worst][2] - v_mem[worst][1]) :
                     worst = i
         else :
@@ -226,6 +238,7 @@ def worst_fit(v_mem, proc, s, p) :
     glue_mem(v_mem)
     return
 
+#Troca o conteudo de mem[i] com mem[-1], atualizando as bases e os topos.
 def switch_mem_pos(mem, i) :
     if (i + 1 == len(mem)) :
         return
@@ -234,11 +247,11 @@ def switch_mem_pos(mem, i) :
     mem[i + 1][1] = mem[i][2]
     return
 
+#Compacta a memória virtual.
 def compact_vmem(mem) :
     i = 0
     while (i < len(mem) and mem[i][0] != -1):
         i += 1
-    # Memória toda foi compactada
     if (i < len(mem)):
         switch_mem_pos(mem, i)
         glue_mem(mem)
@@ -246,6 +259,7 @@ def compact_vmem(mem) :
     glue_mem(mem)
     return
 
+#Compacta a memória real e muda as estruturas adicionais.
 def compact_pmem(mem, indexes, matrix, count, algo, size) :
     i = 0
     while (i < len(mem) and mem[i] != -1) :
@@ -266,7 +280,7 @@ def compact_pmem(mem, indexes, matrix, count, algo, size) :
                 matrix[i + size] = [l for l in matrix[j + size]]
                 matrix[j + size] = [0 for l in matrix[j + size]]
             if (algo == 4) :
-                #ver se realmente é igual ao de cima
+                #ver se realmente é igual ao de cima.
                 count[i + size] = [l for l in count[j + size]]
                 count[j + size] = [0 for l in count[j + size]]
             mem[i+1:] = compact_pmem(mem[i+1:], indexes, matrix, count, algo, i+1)
@@ -295,7 +309,7 @@ def simulation(sim_parameters) :
     tot, vit, s, p = read_file(sim_parameters, to_arrive, compact)
     v_mem = [[-1, 0, vit//p]]
 
-    #agora criar os arquivos de memória
+    #agora criar os arquivos de memória.
     for i in range(tot//p) :
         p_mem.append(-1)
     for i in range(len(p_mem)) :
@@ -307,9 +321,9 @@ def simulation(sim_parameters) :
         for j in range(len(p_mem)) :
             count[i].append(0)
 
-    #começa o loop dos processos
+    #começa o loop dos processos.
     while (to_arrive or l_procs) :
-        #colocar os caras da to_arrive na l_procs
+        #colocar os caras da to_arrive na l_procs.
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         for i in l_procs :
             while (i.times and i.times[0][1] == time) :
