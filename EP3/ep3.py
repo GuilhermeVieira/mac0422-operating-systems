@@ -130,6 +130,25 @@ def page_fault(pos, proc, p, p_mem) :
         return 0
     return 1
 
+def OPTIMAL(p_mem, next_pages, proc, pos, p) :
+    page = math.floor((pos + proc.base*p)/p)
+    if (-1 not in p_mem) :
+        best = [-1, -1]
+        for i in range(len(p_mem)) :
+            if (p_mem[i] in next_pages) :
+                temp = next_pages.index(p_mem[i])
+                if (temp > best[0]) :
+                    best[0] = temp
+                    best[1] = i
+            #Se a página não for acessada no futuro, essa é a melhor posição
+            else :
+                best[1] = i
+                break
+        p_mem[i] = page        
+    else :
+        i = p_mem.index(-1)
+        p_mem[i] = page
+
 def FIFO(p_mem, indexes, proc, pos, p) :
     page = math.floor((pos + proc.base*p)/p)
     #Coloca a nova página na posição presente no começo da indexes.
@@ -351,7 +370,7 @@ def simulation(sim_parameters) :
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
         #atualizar o bit R
-        if (sim_parameters[2] == 4 and time%sim_parameters[3] == 0) :
+        if (sim_parameters[2] == 4) :
             for i in range(len(count)):
                 count[i][0] = 0
         time += 1
