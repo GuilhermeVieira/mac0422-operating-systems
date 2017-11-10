@@ -85,7 +85,7 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
     return
 
 #Transfere do arquivo de trace para a to_arrive e compact.
-def read_file(sim_parameters, to_arrive, compact) :
+def read_file(sim_parameters, to_arrive, compact, next_pages) :
     pid = 0
     file = open(sim_parameters[0], "r")
     line = file.readline()
@@ -97,8 +97,19 @@ def read_file(sim_parameters, to_arrive, compact) :
         to_arrive.append(process(int(line.split()[0]),int(line.split()[1]),int(line.split()[2]),line.split()[3], pid))
         pid += 1
         for i in range(4, len(line.split()), 2) :
+            b = int(line.split()[i]) 
+            t = int(line.split()[i + 1])
             to_arrive[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
+            next_pages.append([to_arrive[-1], b, t])
+
+
     file.close()
+
+    next_pages.sort(key = lambda x: x[2])    
+    for i in next_pages:
+        print(i[0].name, i[1], i[2])
+
+
     return(tot, vit, s, p)
 
 #Junta todas as partes vazias concecutivas da memória.
@@ -324,12 +335,14 @@ def simulation(sim_parameters) :
     p_mem_indexes = []
     matrix = []
     count = []
+    next_pages = [] # For the optimal algorithms
     time = 0
-    tot, vit, s, p = read_file(sim_parameters, to_arrive, compact)
-    v_mem = [[-1, 0, vit//p]]
+    tot, vit, s, p = read_file(sim_parameters, to_arrive, compact, next_pages)
+    v_mem = [[-1, 0, math.ceil(vit/p)]]
+
 
     #agora criar os arquivos de memória.
-    for i in range(tot//p) :
+    for i in range(math.ceil(tot/p)) :
         p_mem.append(-1)
     for i in range(len(p_mem)) :
         matrix.append([])
@@ -374,8 +387,7 @@ def simulation(sim_parameters) :
             for i in range(len(count)):
                 count[i][0] = 0
         time += 1
-        print("VIRTUAL ", v_mem)
-        print("FÍSICA " , p_mem)
+        #printMem(p, v_mem, p_mem)
         if(sim_parameters[2] == 2) :
             print("INDICES ", p_mem_indexes)
         elif(sim_parameters[2] == 3) :
@@ -384,8 +396,26 @@ def simulation(sim_parameters) :
         else :
             for i in range(len(p_mem)) :
                 print(count[i])
-        print("=========================================================================")
     return
+
+def printMem(p, v_mem, p_mem) :
+    print("FÍSICA:")
+    print(v_mem)
+    for i in v_mem :
+        for j in range(i[2] - i[1]) :
+            for k in range(p) :
+                print(repr(i[0]).rjust(3), end = "")
+    print("\n")
+    print("VIRTUAL: ")
+    print(p_mem)
+    for i in p_mem:
+        for k in range(p) :
+            print(repr(i).rjust(3), end = "")
+    print("\n")
+    
+    for i in range(90):
+        print("=", end = "")
+    print("\n")
 
 def main() :
     sim_parameters = ["big_bob.txt", 1, 2, 1]
