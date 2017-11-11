@@ -147,7 +147,7 @@ def OPTIMAL(p_mem, next_pages, proc, pos, p) :
                         best[0] = temp
                         best[1] = i
                         break
-            if (j not in next_pages) :
+            if (next_pages and j not in next_pages) :
                 best[1] = i
                 break
         p_mem[best[1]] = page
