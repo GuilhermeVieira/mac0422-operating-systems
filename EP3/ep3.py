@@ -289,7 +289,6 @@ def compact_pmem(mem, indexes, matrix, count, algo, size) :
     i = 0
     while (i < len(mem) and mem[i] != -1) :
         i += 1
-
     if (i < len(mem)) :
         j = i
         while (j < len(mem) and mem[j] == -1) :
@@ -297,15 +296,13 @@ def compact_pmem(mem, indexes, matrix, count, algo, size) :
         if (j < len(mem)) :
             mem[i] = mem[j]
             mem[j] = -1
-
             if (algo == 2) :
                 l = indexes.index(j + size)
                 indexes[l] = i + size
-            if (algo == 3) :
+            elif (algo == 3) :
                 matrix[i + size] = [l for l in matrix[j + size]]
                 matrix[j + size] = [0 for l in matrix[j + size]]
-            if (algo == 4) :
-                #ver se realmente é igual ao de cima.
+            elif (algo == 4) :
                 count[i + size] = [l for l in count[j + size]]
                 count[j + size] = [0 for l in count[j + size]]
             mem[i+1:] = compact_pmem(mem[i+1:], indexes, matrix, count, algo, i+1)
@@ -335,7 +332,6 @@ def simulation(sim_parameters) :
     tot, vit, s, p = read_file(sim_parameters, to_arrive, compact, next_pages)
     v_mem = [[-1, 0, math.ceil(vit/p)]]
 
-
     #agora criar os arquivos de memória.
     for i in range(math.ceil(tot/p)) :
         p_mem.append(-1)
@@ -350,7 +346,6 @@ def simulation(sim_parameters) :
 
     #começa o loop dos processos.
     while (to_arrive or l_procs) :
-        #colocar os caras da to_arrive na l_procs.
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         for i in l_procs :
             while (i.times and i.times[0][1] == time) :
@@ -372,7 +367,6 @@ def simulation(sim_parameters) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 0)
                     else :
                         LRU4(p_mem, count, i, i.times[0][0], p, 0)
-
                 i.times.pop(0)
         remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, count, sim_parameters[2])
         if (compact and compact[0] == time) :
@@ -390,6 +384,7 @@ def simulation(sim_parameters) :
             print("next_pages ", end = "")
             for i in next_pages :
                 print(i[0].name, i[1], i[2], " ", end = "")
+            print("\n")
         elif(sim_parameters[2] == 2) :
             print("INDICES ", p_mem_indexes)
         elif(sim_parameters[2] == 3) :
@@ -398,10 +393,13 @@ def simulation(sim_parameters) :
         else :
             for i in range(len(p_mem)) :
                 print(count[i])
+        for i in range(90):
+            print("=", end = "")
+        print("\n")        
     return
 
 def printMem(p, v_mem, p_mem) :
-    #print("VIRTUAL:")
+    #print("FÍSICA: ")
     #print(v_mem)
     '''
     for i in v_mem :
@@ -409,7 +407,7 @@ def printMem(p, v_mem, p_mem) :
             for k in range(p) :
                 print(repr(i[0]).rjust(3), end = "")
     print("\n")
-    print("FÍSICA: ")
+    print("VIRTUAL:")
     '''
     print(p_mem)
     '''
@@ -418,9 +416,6 @@ def printMem(p, v_mem, p_mem) :
             print(repr(i).rjust(3), end = "")
     print("\n")
     '''
-    for i in range(90):
-        print("=", end = "")
-    print("\n")
 
 def main() :
     sim_parameters = ["small_bob.txt", 1, 1, 1]
