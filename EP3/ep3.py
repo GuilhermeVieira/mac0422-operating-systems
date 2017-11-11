@@ -401,15 +401,15 @@ def simulation(sim_parameters) :
     return
 
 def printMem(p, v_mem, p_mem) :
-    print("FÍSICA:")
-    print(v_mem)
+    #print("VIRTUAL:")
+    #print(v_mem)
     '''
     for i in v_mem :
         for j in range(i[2] - i[1]) :
             for k in range(p) :
                 print(repr(i[0]).rjust(3), end = "")
     print("\n")
-    print("VIRTUAL: ")
+    print("FÍSICA: ")
     '''
     print(p_mem)
     '''
@@ -423,7 +423,7 @@ def printMem(p, v_mem, p_mem) :
     print("\n")
 
 def main() :
-    sim_parameters = ["big_bob.txt", 1, 2, 1]
+    sim_parameters = ["small_bob.txt", 1, 1, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
