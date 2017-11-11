@@ -39,7 +39,7 @@ def parse_command(command, sim_parameters) :
     return run
 
 #Transfere todos os processos que tem t0 == time da to_arrive para a l_procs.
-def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
+def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available) :
     for i in to_arrive :
         if (i.t0 == time) :
             l_procs.append(i)
@@ -49,6 +49,8 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p) :
                 best_fit(v_mem, i, s, p)
             elif (alg == 2) :
                 worst_fit(v_mem, i, s, p)
+            else :
+                quick_fit(v_mem, proc, s, p, qf_sizes, available)
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
@@ -103,7 +105,24 @@ def read_file(sim_parameters, to_arrive, compact, next_pages) :
             next_pages.append([to_arrive[-1], b, t])
     file.close()
     next_pages.sort(key = lambda x: x[2])
-    return(tot, vit, s, p)
+    pid += 1
+    num_of_lists = math.ceil(pid*.1)
+    print(num_of_lists)
+    sizes = []
+    for i in to_arrive:
+        x = math.ceil((math.ceil((i.b)/s)*s)/p)
+        sizes.append(x)
+    sizes.sort()
+    sizes = sorted(sizes,key=sizes.count,reverse=True)
+    for i in sizes:
+        x = sizes.count(i)
+        if (x > 1):
+            for j in range (x-1):
+                sizes.remove(i)
+    sizes = sizes[:num_of_lists]
+    # Não há certeza se a alocação é por páginas ou bytes
+    # O algoritmo não excluí a alocação de uma unidade (página ou ua)
+    return(tot, vit, s, p, sizes)
 
 #Junta todas as partes vazias concecutivas da memória.
 def glue_mem(v_mem) :
@@ -263,6 +282,46 @@ def worst_fit(v_mem, proc, s, p) :
     glue_mem(v_mem)
     return
 
+def quick_fit(v_mem, proc, s, p, qf_sizes, available) :
+	n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
+
+	if (n_pages in qf_sizes) :
+		i = qf_sizes.index(n_pages)
+		pos = available[i][0]
+
+        if (v_mem[pos][2] - v_mem[pos][1] > n_pages) :
+			v_mem.insert(pos + 1 ,[-1, v_mem[pos][1] + n_pages, v_mem[pos][2]])
+      	v_mem[pos][0], v_mem[pos][2] = proc.pid, v_mem[pos][1] + n_pages
+		proc.new_base(v_mem[pos][1])
+		proc.new_top(v_mem[pos][2])
+    	glue_mem(v_mem) #Se der errado, lembrar que isso pode não estar aqui
+      	fix_available(available, pos) #dá pop em todas as listas com pos
+	else :
+		pos = best_fit(v_mem, proc, s, p)
+      	fix_available(available, pos, qf_sizes)
+
+def fix_available(available, pos, qf_sizes) :
+
+	for i in range(len(available)) :
+      	to_pop = 0
+    	for j in range(len(available[i])) :
+        	if (available[i][j] == pos) :
+            	to_pop += 1
+
+    	for j in range(to_pop) :
+        	available[i].remove(pos)
+		if (v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
+        	for j in range((v_mem[pos + 1][2] - v_mem[pos + 1][1])//qf_sizes[i]) :
+				available.insert(0, pos + 1)
+
+def find_available(v_mem, qf_sizes) :
+	available = []
+    for i in range(len(v_mem)) ;
+		if (v_mem[i][2] - v_mem[i][1] >= qf_sizes[i]) :
+        	for j in range((v_mem[i][2] - v_mem[i][1])//qf_sizes[i]) :
+				available.insert(-1, i)
+    return available
+
 #Troca o conteudo de mem[i] com mem[-1], atualizando as bases e os topos.
 def switch_mem_pos(mem, i) :
     if (i + 1 == len(mem)) :
@@ -329,10 +388,11 @@ def simulation(sim_parameters) :
     count = []
     next_pages = [] # For the optimal algorithms
     time = 0
-    tot, vit, s, p = read_file(sim_parameters, to_arrive, compact, next_pages)
+    tot, vit, s, p, qf_sizes = read_file(sim_parameters, to_arrive, compact, next_pages)
     v_mem = [[-1, 0, math.ceil(vit/p)]]
 
     #agora criar os arquivos de memória.
+    available = find_available(v_mem, qf_sizes)
     for i in range(math.ceil(tot/p)) :
         p_mem.append(-1)
     for i in range(len(p_mem)) :
@@ -346,7 +406,7 @@ def simulation(sim_parameters) :
 
     #começa o loop dos processos.
     while (to_arrive or l_procs) :
-        arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
+        arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p, qf_sizes, available)
         for i in l_procs :
             while (i.times and i.times[0][1] == time) :
                 if (sim_parameters[2] == 1) :
@@ -374,6 +434,8 @@ def simulation(sim_parameters) :
             compact_pmem(p_mem, p_mem_indexes , matrix, count, sim_parameters[2], 0)
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
+        if (sim_parameters[1] == 3)  :
+            available = find_available(v_mem, qf_sizes)    
         #atualizar o bit R
         if (sim_parameters[2] == 4) :
             for i in range(len(count)):
@@ -395,7 +457,7 @@ def simulation(sim_parameters) :
                 print(count[i])
         for i in range(90):
             print("=", end = "")
-        print("\n")        
+        print("\n")
     return
 
 def printMem(p, v_mem, p_mem) :
