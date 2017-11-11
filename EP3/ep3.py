@@ -139,15 +139,15 @@ def OPTIMAL(p_mem, next_pages, proc, pos, p) :
     if (-1 not in p_mem) :
         best = [-1, -1]
         for i in range(len(p_mem)) :
-            for j in next_pages :
-                n_page = math.floor((j[1] + j[0].base*p)/p)
+            for j in range(len(next_pages)) :
+                n_page = math.floor((next_pages[j][1] + next_pages[j][0].base*p)/p)
                 if (p_mem[i] == n_page) :
-                    temp = next_pages.index(j)
+                    temp = j
                     if (temp > best[0]) :
                         best[0] = temp
                         best[1] = i
-                        break
-            if (next_pages and j not in next_pages) :
+                    break
+            if (next_pages and j == len(next_pages) - 1 and p_mem[-1] != page) :
                 best[1] = i
                 break
         p_mem[best[1]] = page
