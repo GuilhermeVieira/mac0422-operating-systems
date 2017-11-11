@@ -97,19 +97,12 @@ def read_file(sim_parameters, to_arrive, compact, next_pages) :
         to_arrive.append(process(int(line.split()[0]),int(line.split()[1]),int(line.split()[2]),line.split()[3], pid))
         pid += 1
         for i in range(4, len(line.split()), 2) :
-            b = int(line.split()[i]) 
+            b = int(line.split()[i])
             t = int(line.split()[i + 1])
-            to_arrive[-1].addExec(int(line.split()[i]), int(line.split()[i + 1]))
+            to_arrive[-1].addExec(b, t)
             next_pages.append([to_arrive[-1], b, t])
-
-
     file.close()
-
-    next_pages.sort(key = lambda x: x[2])    
-    for i in next_pages:
-        print(i[0].name, i[1], i[2])
-
-
+    next_pages.sort(key = lambda x: x[2])
     return(tot, vit, s, p)
 
 #Junta todas as partes vazias concecutivas da memória.
@@ -146,16 +139,18 @@ def OPTIMAL(p_mem, next_pages, proc, pos, p) :
     if (-1 not in p_mem) :
         best = [-1, -1]
         for i in range(len(p_mem)) :
-            if (p_mem[i] in next_pages) :
-                temp = next_pages.index(p_mem[i])
-                if (temp > best[0]) :
-                    best[0] = temp
-                    best[1] = i
-            #Se a página não for acessada no futuro, essa é a melhor posição
-            else :
+            for j in next_pages :
+                n_page = math.floor((j[1] + j[0].base*p)/p)
+                if (p_mem[i] == n_page) :
+                    temp = next_pages.index(j)
+                    if (temp > best[0]) :
+                        best[0] = temp
+                        best[1] = i
+                        break
+            if (j not in next_pages) :
                 best[1] = i
                 break
-        p_mem[i] = page        
+        p_mem[best[1]] = page
     else :
         i = p_mem.index(-1)
         p_mem[i] = page
@@ -359,10 +354,13 @@ def simulation(sim_parameters) :
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p)
         for i in l_procs :
             while (i.times and i.times[0][1] == time) :
-
+                if (sim_parameters[2] == 1) :
+                    next_pages.pop(0)
                 if (page_fault(i.times[0][0], i, p, p_mem)) :
                     print("deu page_fault")
-                    if (sim_parameters[2] == 2) :
+                    if (sim_parameters[2] == 1) :
+                        OPTIMAL(p_mem, next_pages, i, i.times[0][0], p)
+                    elif (sim_parameters[2] == 2) :
                         FIFO(p_mem, p_mem_indexes, i, i.times[0][0], p)
                     elif (sim_parameters[2] == 3) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 1)
@@ -387,8 +385,12 @@ def simulation(sim_parameters) :
             for i in range(len(count)):
                 count[i][0] = 0
         time += 1
-        #printMem(p, v_mem, p_mem)
-        if(sim_parameters[2] == 2) :
+        printMem(p, v_mem, p_mem)
+        if (sim_parameters[2] == 1) :
+            print("next_pages ", end = "")
+            for i in next_pages :
+                print(i[0].name, i[1], i[2], " ", end = "")
+        elif(sim_parameters[2] == 2) :
             print("INDICES ", p_mem_indexes)
         elif(sim_parameters[2] == 3) :
             for i in range(len(p_mem)) :
@@ -401,18 +403,21 @@ def simulation(sim_parameters) :
 def printMem(p, v_mem, p_mem) :
     print("FÍSICA:")
     print(v_mem)
+    '''
     for i in v_mem :
         for j in range(i[2] - i[1]) :
             for k in range(p) :
                 print(repr(i[0]).rjust(3), end = "")
     print("\n")
     print("VIRTUAL: ")
+    '''
     print(p_mem)
+    '''
     for i in p_mem:
         for k in range(p) :
             print(repr(i).rjust(3), end = "")
     print("\n")
-    
+    '''
     for i in range(90):
         print("=", end = "")
     print("\n")
