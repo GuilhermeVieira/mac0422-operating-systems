@@ -168,6 +168,8 @@ def OPTIMAL(p_mem, next_pages, proc, pos, p) :
             if (next_pages and j == len(next_pages) - 1 and p_mem[-1] != page) :
                 best[1] = i
                 break
+        #Se next_pages esta vazia então a página sera carregada na posição -1
+        #da p_mem, que é equivalente a ultima posição da p_mem.
         p_mem[best[1]] = page
     else :
         i = p_mem.index(-1)
@@ -306,7 +308,7 @@ def fix_available(available, pos, qf_sizes, v_mem) :
                 to_pop += 1
         for j in range(to_pop) :
             available[i].remove(pos)
-        if (pos + 1 != len(v_mem) and v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
+        if (pos + 1 != len(v_mem) and v_mem[pos + 1][0] == -1 and v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
             for j in range((v_mem[pos + 1][2] - v_mem[pos + 1][1])//qf_sizes[i]) :
                 available[i].insert(0, pos + 1)
 
