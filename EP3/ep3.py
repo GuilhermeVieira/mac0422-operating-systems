@@ -107,7 +107,6 @@ def read_file(sim_parameters, to_arrive, compact, next_pages) :
     next_pages.sort(key = lambda x: x[2])
     pid += 1
     num_of_lists = math.ceil(pid*.1)
-    print(num_of_lists)
     sizes = []
     for i in to_arrive:
         x = math.ceil((math.ceil((i.b)/s)*s)/p)
@@ -301,22 +300,24 @@ def quick_fit(v_mem, proc, s, p, qf_sizes, available) :
 def fix_available(available, pos, qf_sizes, v_mem) :
     for i in range(len(available)) :
         to_pop = 0
+        #quem sabe pode bugar quando a available[i] for vazia
         for j in range(len(available[i])) :
             if (available[i][j] == pos) :
                 to_pop += 1
         for j in range(to_pop) :
             available[i].remove(pos)
-        if (v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
+        if (pos + 1 != len(v_mem) and v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
             for j in range((v_mem[pos + 1][2] - v_mem[pos + 1][1])//qf_sizes[i]) :
-                available.insert(0, pos + 1)
+                available[i].insert(0, pos + 1)
 
 def find_available(v_mem, qf_sizes) :
     available = []
-    for i in range(len(v_mem)) :
+    for k in qf_sizes :
         available.append([])
-        if (v_mem[i][2] - v_mem[i][1] >= qf_sizes[i]) :
-            for j in range((v_mem[i][2] - v_mem[i][1])//qf_sizes[i]) :
-                available[-1].append(i)
+        for i in range(len(v_mem)) :
+            if (v_mem[i][2] - v_mem[i][1] >= k) :
+                for j in range((v_mem[i][2] - v_mem[i][1])//k) :
+                    available[-1].append(i)
     return available
 
 #Troca o conteudo de mem[i] com mem[-1], atualizando as bases e os topos.
