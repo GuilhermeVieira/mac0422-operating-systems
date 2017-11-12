@@ -50,7 +50,7 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available) :
             elif (alg == 2) :
                 worst_fit(v_mem, i, s, p)
             else :
-                quick_fit(v_mem, proc, s, p, qf_sizes, available)
+                quick_fit(v_mem, i, s, p, qf_sizes, available)
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
@@ -255,7 +255,7 @@ def best_fit(v_mem, proc, s, p) :
     proc.new_base(v_mem[best][1])
     proc.new_top(v_mem[best][2])
     glue_mem(v_mem)
-    return
+    return best
 
 def worst_fit(v_mem, proc, s, p) :
     #começar com um worst que não existe.
@@ -283,43 +283,40 @@ def worst_fit(v_mem, proc, s, p) :
     return
 
 def quick_fit(v_mem, proc, s, p, qf_sizes, available) :
-	n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
-
-	if (n_pages in qf_sizes) :
-		i = qf_sizes.index(n_pages)
-		pos = available[i][0]
-
+    n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
+    if (n_pages in qf_sizes) :
+        i = qf_sizes.index(n_pages)
+        pos = available[i][0]
         if (v_mem[pos][2] - v_mem[pos][1] > n_pages) :
-			v_mem.insert(pos + 1 ,[-1, v_mem[pos][1] + n_pages, v_mem[pos][2]])
-      	v_mem[pos][0], v_mem[pos][2] = proc.pid, v_mem[pos][1] + n_pages
-		proc.new_base(v_mem[pos][1])
-		proc.new_top(v_mem[pos][2])
-    	glue_mem(v_mem) #Se der errado, lembrar que isso pode não estar aqui
-      	fix_available(available, pos) #dá pop em todas as listas com pos
-	else :
-		pos = best_fit(v_mem, proc, s, p)
-      	fix_available(available, pos, qf_sizes)
+            v_mem.insert(pos + 1 ,[-1, v_mem[pos][1] + n_pages, v_mem[pos][2]])
+        v_mem[pos][0], v_mem[pos][2] = proc.pid, v_mem[pos][1] + n_pages
+        proc.new_base(v_mem[pos][1])
+        proc.new_top(v_mem[pos][2])
+        glue_mem(v_mem) #Se der errado, lembrar que isso pode não estar aqui
+        fix_available(available, pos, qf_sizes, v_mem) #dá pop em todas as listas com pos
+    else :
+        pos = best_fit(v_mem, proc, s, p)
+        fix_available(available, pos, qf_sizes, v_mem)
 
-def fix_available(available, pos, qf_sizes) :
-
-	for i in range(len(available)) :
-      	to_pop = 0
-    	for j in range(len(available[i])) :
-        	if (available[i][j] == pos) :
-            	to_pop += 1
-
-    	for j in range(to_pop) :
-        	available[i].remove(pos)
-		if (v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
-        	for j in range((v_mem[pos + 1][2] - v_mem[pos + 1][1])//qf_sizes[i]) :
-				available.insert(0, pos + 1)
+def fix_available(available, pos, qf_sizes, v_mem) :
+    for i in range(len(available)) :
+        to_pop = 0
+        for j in range(len(available[i])) :
+            if (available[i][j] == pos) :
+                to_pop += 1
+        for j in range(to_pop) :
+            available[i].remove(pos)
+        if (v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
+            for j in range((v_mem[pos + 1][2] - v_mem[pos + 1][1])//qf_sizes[i]) :
+                available.insert(0, pos + 1)
 
 def find_available(v_mem, qf_sizes) :
-	available = []
-    for i in range(len(v_mem)) ;
-		if (v_mem[i][2] - v_mem[i][1] >= qf_sizes[i]) :
-        	for j in range((v_mem[i][2] - v_mem[i][1])//qf_sizes[i]) :
-				available.insert(-1, i)
+    available = []
+    for i in range(len(v_mem)) :
+        available.append([])
+        if (v_mem[i][2] - v_mem[i][1] >= qf_sizes[i]) :
+            for j in range((v_mem[i][2] - v_mem[i][1])//qf_sizes[i]) :
+                available[-1].append(i)
     return available
 
 #Troca o conteudo de mem[i] com mem[-1], atualizando as bases e os topos.
@@ -435,7 +432,7 @@ def simulation(sim_parameters) :
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
         if (sim_parameters[1] == 3)  :
-            available = find_available(v_mem, qf_sizes)    
+            available = find_available(v_mem, qf_sizes)
         #atualizar o bit R
         if (sim_parameters[2] == 4) :
             for i in range(len(count)):
