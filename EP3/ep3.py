@@ -478,7 +478,7 @@ def printMem(p, v_mem, p_mem) :
     '''
 
 def main() :
-    sim_parameters = ["big_bob.txt", 3, 1, 1]
+    sim_parameters = ["virtual_bob.txt", 1, 1, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
