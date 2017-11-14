@@ -1,3 +1,5 @@
+from binary import *
+
 #Junta todas as partes vazias concecutivas da memória.
 def glue_mem(v_mem) :
     #rejuntar a mémoria != desfragmentar
@@ -76,20 +78,31 @@ def fix_B_T(v_mem, l_procs, p_mem) :
                 break
 
 def printMem(p, v_mem, p_mem) :
-    #print("FÍSICA: ")
+    print("Virtual: ")
     print(v_mem)
-    '''
+    
+    MemState =[]
     for i in v_mem :
         for j in range(i[2] - i[1]) :
             for k in range(p) :
-                print(repr(i[0]).rjust(3), end = "")
+                #print(repr(i[0]).rjust(3), end = "")
+                MemState.append(i[0])
+    
+    writeBin("ep3.vir", MemState)
+    print(readBin("ep3.vir"))
     print("\n")
-    print("VIRTUAL:")
-    '''
+
+    MemState =[]
+
+    print("Física:")
     print(p_mem)
-    '''
+    
     for i in p_mem:
         for k in range(p) :
-            print(repr(i).rjust(3), end = "")
+            #print(repr(i).rjust(3), end = "")
+            MemState.append(i)
+
+    writeBin("ep3.mem", MemState)
+    print(readBin("ep3.mem"))
     print("\n")
-    '''
+    
