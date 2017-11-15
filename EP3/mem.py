@@ -1,4 +1,5 @@
 from binary import *
+import math
 
 #Junta todas as partes vazias concecutivas da memória.
 def glue_mem(v_mem) :
@@ -77,32 +78,36 @@ def fix_B_T(v_mem, l_procs, p_mem) :
                 i.base, i.top = j[1], j[2]
                 break
 
-def printMem(p, v_mem, p_mem) :
-    print("Virtual: ")
-    print(v_mem)
-    
-    MemState =[]
-    for i in v_mem :
-        for j in range(i[2] - i[1]) :
-            for k in range(p) :
-                #print(repr(i[0]).rjust(3), end = "")
-                MemState.append(i[0])
-    
-    writeBin("ep3.vir", MemState)
-    print(readBin("ep3.vir"))
-    print("\n")
+def print_mem(flag, s, p, v_mem, p_mem, l_procs) :
+    if (not flag) :
+        MemState = []
+        for i in v_mem :
+            if (i[0] == -1) :
+                MemState.extend(-1 for j in range((i[2] - i[1])*p))
+            else :
+                for k in l_procs :
+                    if (k.pid == i[0]) :
+                        proc = k
+                        break
+                MemState.extend(i[0] for j in range((math.ceil(proc.b/s))*s))
+                MemState.extend(-1 for j in range((math.ceil(proc.b/s))*s + i[1]*p, (i[2] - i[1])*p))
+        writeBin("ep3.vir", MemState)
 
-    MemState =[]
+        MemState = []
+        for i in p_mem:
+            if (i == -1) :
+                MemState.extend(-1 for j in range(p))
+            else :
+                for j in l_procs :
+                    if (i >= j.base and i < j.top) :
+                        break
+                MemState.extend(j.pid for k in range(p))
+        writeBin("ep3.mem", MemState)
 
-    print("Física:")
-    print(p_mem)
-    
-    for i in p_mem:
-        for k in range(p) :
-            #print(repr(i).rjust(3), end = "")
-            MemState.append(i)
-
-    writeBin("ep3.mem", MemState)
-    print(readBin("ep3.mem"))
-    print("\n")
-    
+    else :
+        print("Virtual: ", end = "")
+        print(readBin("ep3.vir"))
+        print("\n")
+        print("Física: ", end = "")
+        print(readBin("ep3.mem"))
+        print("\n")

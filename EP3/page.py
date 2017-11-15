@@ -1,3 +1,5 @@
+import math
+
 #A função vê se a página que contem a posição p se encontra na p_mem.
 def page_fault(pos, proc, p, p_mem) :
     vit_pos = pos + proc.base*p

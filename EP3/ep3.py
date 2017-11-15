@@ -42,7 +42,7 @@ def parse_command(command, sim_parameters) :
     return run
 
 #Transfere todos os processos que tem t0 == time da to_arrive para a l_procs.
-def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available) :
+def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available, p_mem) :
     for i in to_arrive :
         if (i.t0 == time) :
             l_procs.append(i)
@@ -54,6 +54,7 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available) :
                 worst_fit(v_mem, i, s, p)
             else :
                 quick_fit(v_mem, i, s, p, qf_sizes, available)
+            print_mem(0, s, p, v_mem, p_mem, l_procs)
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
@@ -63,7 +64,6 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
     to_remove = []
     for i in l_procs :
         if (i.tf == time) :
-            print("Tempo: ", time, "| Removeu processo: ", i.pid)
             #Retirar o processo da memória virtual.
             for j in range(len(v_mem)) :
                 if (v_mem[j][0] == i.pid) :
@@ -86,7 +86,6 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
     for j in to_remove :
         l_procs.remove(j)
     glue_mem(v_mem)
-
     return
 
 #Transfere do arquivo de trace para a to_arrive e compact.
@@ -134,12 +133,11 @@ def simulation(sim_parameters) :
     p_mem_indexes = []
     matrix = []
     count = []
-    next_pages = [] # For the optimal algorithms
+    next_pages = []
     time = 0
     tot, vit, s, p, qf_sizes = read_file(sim_parameters, to_arrive, compact, next_pages)
     v_mem = [[-1, 0, math.ceil(vit/p)]]
 
-    #agora criar os arquivos de memória.
     available = find_available(v_mem, qf_sizes)
     for i in range(math.ceil(tot/p)) :
         p_mem.append(-1)
@@ -154,13 +152,12 @@ def simulation(sim_parameters) :
 
     #começa o loop dos processos.
     while (to_arrive or l_procs) :
-        arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p, qf_sizes, available)
+        arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p, qf_sizes, available, p_mem)
         for i in l_procs :
             while (i.times and i.times[0][1] == time) :
                 if (sim_parameters[2] == 1) :
                     next_pages.pop(0)
                 if (page_fault(i.times[0][0], i, p, p_mem)) :
-                    print("deu page_fault")
                     if (sim_parameters[2] == 1) :
                         OPTIMAL(p_mem, next_pages, i, i.times[0][0], p)
                     elif (sim_parameters[2] == 2) :
@@ -169,47 +166,34 @@ def simulation(sim_parameters) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 1)
                     else :
                         LRU4(p_mem, count, i, i.times[0][0], p, 1)
+                    print_mem(0, s, p, v_mem, p_mem, l_procs)
                 else :
-                    print("não deu page fault")
                     if (sim_parameters[2] == 3) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 0)
                     else :
                         LRU4(p_mem, count, i, i.times[0][0], p, 0)
                 i.times.pop(0)
         remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, count, sim_parameters[2])
+        print_mem(0, s, p, v_mem, p_mem, l_procs)
         if (compact and compact[0] == time) :
             compact_vmem(v_mem)
             compact_pmem(p_mem, p_mem_indexes , matrix, count, sim_parameters[2], 0)
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
+            print_mem(0, s, p, v_mem, p_mem, l_procs)
         if (sim_parameters[1] == 3)  :
             available = find_available(v_mem, qf_sizes)
         #atualizar o bit R
         if (sim_parameters[2] == 4) :
             for i in range(len(count)):
                 count[i][0] = 0
+        if (time%sim_parameters[3] == 0 and time != 0) :
+            print_mem(1, s, p, v_mem, p_mem, l_procs)
         time += 1
-        printMem(p, v_mem, p_mem)
-        if (sim_parameters[2] == 1) :
-            print("next_pages ", end = "")
-            for i in next_pages :
-                print(i[0].name, i[1], i[2], " ", end = "")
-            print("\n")
-        elif(sim_parameters[2] == 2) :
-            print("INDICES ", p_mem_indexes)
-        elif(sim_parameters[2] == 3) :
-            for i in range(len(p_mem)) :
-                print(matrix[i])
-        else :
-            for i in range(len(p_mem)) :
-                print(count[i])
-        for i in range(90):
-            print("=", end = "")
-        print("\n")
     return
 
 def main() :
-    sim_parameters = ["virtual_bob.txt", 1, 1, 1]
+    sim_parameters = ["big_bob.txt", 1, 1, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
