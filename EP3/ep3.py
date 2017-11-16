@@ -88,7 +88,8 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
     glue_mem(v_mem)
     return
 
-#Transfere do arquivo de trace para a to_arrive e compact.
+#Transfere do arquivo de trace para a to_arrive e compact. Cria a next_pages se
+#o algoritmo OPTIMAL for usado.
 def read_file(sim_parameters, to_arrive, compact, next_pages) :
     pid = 0
     file = open(sim_parameters[0], "r")
@@ -138,6 +139,7 @@ def simulation(sim_parameters) :
     tot, vit, s, p, qf_sizes = read_file(sim_parameters, to_arrive, compact, next_pages)
     v_mem = [[-1, 0, math.ceil(vit/p)]]
 
+    #Criação das estruturas adicionais de cada algoritmo.
     available = find_available(v_mem, qf_sizes)
     for i in range(math.ceil(tot/p)) :
         p_mem.append(-1)
@@ -152,8 +154,10 @@ def simulation(sim_parameters) :
 
     #começa o loop dos processos.
     while (to_arrive or l_procs) :
+        #Coloca todos os processos que chegaram na l_procs.
         arrive(to_arrive, l_procs, time, v_mem, sim_parameters[1], s, p, qf_sizes, available, p_mem)
         for i in l_procs :
+            #Carrega as páginas nescessárias.
             while (i.times and i.times[0][1] == time) :
                 if (sim_parameters[2] == 1) :
                     next_pages.pop(0)
@@ -167,6 +171,7 @@ def simulation(sim_parameters) :
                     else :
                         LRU4(p_mem, count, i, i.times[0][0], p, 1)
                     print_mem(0, s, p, v_mem, p_mem, l_procs)
+                #Atuaixa as estruturas mesmo se não houve page_fault.
                 else :
                     if (sim_parameters[2] == 3) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 0)
@@ -174,6 +179,7 @@ def simulation(sim_parameters) :
                         LRU4(p_mem, count, i, i.times[0][0], p, 0)
                 i.times.pop(0)
         remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, count, sim_parameters[2])
+        #Atualiza os arquivos de memória depois de remover processos.
         print_mem(0, s, p, v_mem, p_mem, l_procs)
         if (compact and compact[0] == time) :
             compact_vmem(v_mem)
@@ -181,6 +187,7 @@ def simulation(sim_parameters) :
             fix_B_T(v_mem, l_procs, p_mem)
             compact.pop(0)
             print_mem(0, s, p, v_mem, p_mem, l_procs)
+        #Refaz a available depois de remover processos e compactar a memória
         if (sim_parameters[1] == 3)  :
             available = find_available(v_mem, qf_sizes)
         #atualizar o bit R

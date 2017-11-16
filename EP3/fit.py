@@ -56,37 +56,45 @@ def quick_fit(v_mem, proc, s, p, qf_sizes, available) :
     n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
     if (n_pages in qf_sizes) :
         i = qf_sizes.index(n_pages)
+        #como é garantido que há espaço não é nescessário ver se index deu erro.
         pos = available[i][0]
         if (v_mem[pos][2] - v_mem[pos][1] > n_pages) :
             v_mem.insert(pos + 1 ,[-1, v_mem[pos][1] + n_pages, v_mem[pos][2]])
         v_mem[pos][0], v_mem[pos][2] = proc.pid, v_mem[pos][1] + n_pages
         proc.new_base(v_mem[pos][1])
         proc.new_top(v_mem[pos][2])
-        glue_mem(v_mem) #Se der errado, lembrar que isso pode não estar aqui
-        fix_available(available, pos, qf_sizes, v_mem) #dá pop em todas as listas com pos
+        glue_mem(v_mem)
+        #Precisamos refazer partes da estrutura adicional.
+        fix_available(available, pos, qf_sizes, v_mem)
     else :
+        #Se não for um tamanho muito requisitado usamos o best_fit para alocar.
         pos = best_fit(v_mem, proc, s, p)
         fix_available(available, pos, qf_sizes, v_mem)
 
+#Da um update na available.
 def fix_available(available, pos, qf_sizes, v_mem) :
     for i in range(len(available)) :
         to_pop = 0
-        #quem sabe pode bugar quando a available[i] for vazia
+        #Contar quantas vezes a posição alterada foi referenciada.
         for j in range(len(available[i])) :
             if (available[i][j] == pos) :
                 to_pop += 1
+        #Remove todas as referências.
         for j in range(to_pop) :
             available[i].remove(pos)
+        #Se retiramos mais do que devia da available, iremos concertar.
         if (pos + 1 != len(v_mem) and v_mem[pos + 1][0] == -1 and v_mem[pos + 1][2] - v_mem[pos + 1][1] >= qf_sizes[i]) :
             for j in range((v_mem[pos + 1][2] - v_mem[pos + 1][1])//qf_sizes[i]) :
                 available[i].insert(0, pos + 1)
 
+#Cria a estrutura adcional para o quick_fit.
 def find_available(v_mem, qf_sizes) :
     available = []
     for k in qf_sizes :
         available.append([])
         for i in range(len(v_mem)) :
             if (v_mem[i][2] - v_mem[i][1] >= k) :
+                #Coloca quantas vezes o tamanho cabe nessa parte da memória.
                 for j in range((v_mem[i][2] - v_mem[i][1])//k) :
                     available[-1].append(i)
     return available

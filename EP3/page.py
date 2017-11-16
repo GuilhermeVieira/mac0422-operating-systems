@@ -70,7 +70,6 @@ def LRU4(p_mem, count, proc, pos, p, p_fault) :
     least = [-1, len(count[0])]
     #Atualiza os contadores.
     for i in range(len(count)) :
-        #ou é 0 ou -1 ou 1
         for j in range(len(count[i]) - 2, -1, -1) :
             count[i][j + 1] = count[i][j]
     #Procura a página que sera substituida.

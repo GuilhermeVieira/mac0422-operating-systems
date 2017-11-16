@@ -22,11 +22,11 @@ def glue_mem(v_mem) :
             j -= 1
         i += 1
 
-#Troca o conteudo de mem[i] com mem[-1], atualizando as bases e os topos.
+#Troca o conteudo de mem[i] com mem[i + 1], atualizando as bases e os topos.
 def switch_mem_pos(mem, i) :
     if (i + 1 == len(mem)) :
         return
-    mem[i][0], mem[i + 1][0] = mem[i+ 1][0], mem[i][0]
+    mem[i][0], mem[i + 1][0] = mem[i + 1][0], mem[i][0]
     mem[i][2] = mem[i + 1][2] - mem[i + 1][1] + mem[i][1]
     mem[i + 1][1] = mem[i][2]
     return
@@ -69,9 +69,13 @@ def compact_pmem(mem, indexes, matrix, count, algo, size) :
 
 #Se houve uma compactação a base e o topo de um processo deve ser alterado.
 def fix_B_T(v_mem, l_procs, p_mem) :
+    #Ve todos os processos.
     for i in l_procs :
+        #Procura ele na memória virtual.
         for j in v_mem :
             if (j[0] == i.pid) :
+                #Procura toda página que pertence a ele na p_mem e muda o conteudo
+                #devido a mudança da base e do topo.
                 for k in range(len(p_mem)) :
                     if (i.base <= p_mem[k] and p_mem[k] < i.top) :
                         p_mem[k] -= i.base - j[1]

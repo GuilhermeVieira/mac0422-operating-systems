@@ -1,12 +1,13 @@
+import os
 # Escreve em binário o vetor vector no arquivo filename
 def writeBin(filename, vector):
     vectorBytes = []
 
     for i in vector:
-        vectorBytes.append(i.to_bytes(1, byteorder='big', signed=True))
-    
-    binFile = open(filename, "wb")
-    
+        vectorBytes.append(i.to_bytes(1, byteorder = 'big', signed = True))
+    filepath = os.path.join('/tmp', filename)
+    binFile = open(filepath, "wb")
+
     for i in vectorBytes:
         binFile.write(i)
 
@@ -14,13 +15,14 @@ def writeBin(filename, vector):
 
 # Retorna os bytes convertidos em inteiro lidos do arquivo filename.
 def readBin(filename):
-    binFile = open(filename,"rb")
+    filepath = os.path.join('/tmp', filename)
+    binFile = open(filepath, "rb")
     bytesRead = []
 
     try:
         byte = binFile.read(1)
         while len(byte) > 0:
-            i = int.from_bytes(byte, byteorder='big', signed=True)
+            i = int.from_bytes(byte, byteorder = 'big', signed = True)
             bytesRead.append(i)
             byte = binFile.read(1)
     finally:
