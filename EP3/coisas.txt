@@ -1,6 +1,0 @@
--Ver o path do arquivo que esta sendo carregado
--fazer o quickFit
--fazer o Optimal
--Novos testes/ ver se os antigos são bons
--Arquivos de memória e ver como vai comprimir eles
--Ver se dá certo quando a p_mem esta cheia

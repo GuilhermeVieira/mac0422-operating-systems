@@ -1,5 +1,6 @@
 import sys
 import math
+import os
 from page import *
 from fit import *
 from mem import *
@@ -16,7 +17,6 @@ class process:
         self.times.append((px, tx))
     def new_base(self, base) :
         self.base = base
-    #acho que é inuti agora
     def new_top(self, top) :
         self.top = top
     #metodo usado para debug
@@ -92,7 +92,13 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
 #o algoritmo OPTIMAL for usado.
 def read_file(sim_parameters, to_arrive, compact, next_pages) :
     pid = 0
-    file = open(sim_parameters[0], "r")
+    #Path relativo.
+    try:
+        file = open(sim_parameters[0], "r")
+    #Path absoluto.
+    except OSError:
+        filepath = os.path.join(sim_parameters[0], "")
+        file = open(filepath, "r")
     line = file.readline()
     tot, vit, s, p = int(line.split()[0]), int(line.split()[1]), int(line.split()[2]), int(line.split()[3])
     for line in file :
@@ -107,6 +113,7 @@ def read_file(sim_parameters, to_arrive, compact, next_pages) :
             to_arrive[-1].addExec(b, t)
             next_pages.append([to_arrive[-1], b, t])
     file.close()
+    #Criação da estrutura adicional.
     next_pages.sort(key = lambda x: x[2])
     pid += 1
     num_of_lists = math.ceil(pid*.1)
