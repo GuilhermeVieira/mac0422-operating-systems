@@ -3,9 +3,14 @@
 import sys
 import math
 import os
+from timeit import default_timer as timer
+from statistics import mean
 from page import *
 from fit import *
 from mem import *
+from xlwt import Workbook
+from time import sleep
+tempo = []
 
 class process:
     def __init__(self, t0, tf, b, name, pid) :
@@ -50,12 +55,15 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available, p_me
             l_procs.append(i)
             #Como os processos já chegaram vamos usar os alg's de fit para alocar
             #os espaço nescessário na memória virtual.
+            begin = timer()
             if (alg == 1) :
                 best_fit(v_mem, i, s, p)
             elif (alg == 2) :
                 worst_fit(v_mem, i, s, p)
             else :
                 quick_fit(v_mem, i, s, p, qf_sizes, available)
+            end = timer()
+            tempo.append(end -begin)
             print_mem(0, s, p, v_mem, p_mem, l_procs)
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
@@ -182,7 +190,7 @@ def simulation(sim_parameters) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 0)
                     else :
                         LRU4(p_mem, count, i, i.times[0][0], p, 0)
-                print_mem(0, s, p, v_mem, p_mem, l_procs)        
+                print_mem(0, s, p, v_mem, p_mem, l_procs)
                 i.times.pop(0)
         remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, count, sim_parameters[2])
         #Atualiza os arquivos de memória depois de remover processos.
@@ -203,6 +211,7 @@ def simulation(sim_parameters) :
         if (time%sim_parameters[3] == 0 and time != 0) :
             print_mem(1, s, p, v_mem, p_mem, l_procs)
         time += 1
+    print(tempo)
     return
 
 def main() :
@@ -213,4 +222,29 @@ def main() :
         if(parse_command(command, sim_parameters)) :
             simulation(sim_parameters)
 
-main()
+#main()
+from xlwt import Workbook
+sim_parameters = ["mother_bob.txt", 1, 1, 60]
+wb = Workbook()
+deadlines_sheet = wb.add_sheet('fit')
+deadlines_sheet.write(0,0, "MEDIDAS")
+for i in range(30):
+	deadlines_sheet.write(i + 1,0, "Medição "+str(i+1))
+deadlines_sheet.write(0, 1, "best")
+deadlines_sheet.write(0, 2,"worst")
+deadlines_sheet.write(0, 3,"quick")
+for bob in range(30) :
+    simulation(sim_parameters)
+    deadlines_sheet.write(bob + 1, 1, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
+sleep(10)
+sim_parameters = ["mother_bob.txt", 2, 1, 60]
+for bob in range(30) :
+    simulation(sim_parameters)
+    deadlines_sheet.write(bob + 1, 2, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
+sleep(10)
+sim_parameters = ["mother_bob.txt", 3, 1, 60]
+for bob in range(30) :
+    simulation(sim_parameters)
+    deadlines_sheet.write(bob + 1, 3, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
+
+wb.save('acabeiDeRodarRENOMEAR.xls')
