@@ -55,6 +55,7 @@ def worst_fit(v_mem, proc, s, p) :
     return
 
 def quick_fit(v_mem, proc, s, p, qf_sizes, available) :
+    flag = 0
     n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
     if (n_pages in qf_sizes) :
         i = qf_sizes.index(n_pages)
@@ -62,25 +63,28 @@ def quick_fit(v_mem, proc, s, p, qf_sizes, available) :
         pos = available[i][0]
         if (v_mem[pos][2] - v_mem[pos][1] > n_pages) :
             v_mem.insert(pos + 1 ,[-1, v_mem[pos][1] + n_pages, v_mem[pos][2]])
+            flag = 1
         v_mem[pos][0], v_mem[pos][2] = proc.pid, v_mem[pos][1] + n_pages
         proc.new_base(v_mem[pos][1])
         proc.new_top(v_mem[pos][2])
         glue_mem(v_mem)
         #Precisamos refazer partes da estrutura adicional.
-        fix_available(available, pos, qf_sizes, v_mem)
+        fix_available(available, pos, qf_sizes, v_mem, flag)
     else :
         #Se não for um tamanho muito requisitado usamos o best_fit para alocar.
         pos = best_fit(v_mem, proc, s, p)
-        fix_available(available, pos, qf_sizes, v_mem)
+        fix_available(available, pos, qf_sizes, v_mem, flag)
 
 #Da um update na available.
-def fix_available(available, pos, qf_sizes, v_mem) :
+def fix_available(available, pos, qf_sizes, v_mem, flag) :
     for i in range(len(available)) :
         to_pop = 0
         #Contar quantas vezes a posição alterada foi referenciada.
         for j in range(len(available[i])) :
             if (available[i][j] == pos) :
                 to_pop += 1
+            elif (flag and available[i][j] > pos) :
+                available[i][j] += 1
         #Remove todas as referências.
         for j in range(to_pop) :
             available[i].remove(pos)

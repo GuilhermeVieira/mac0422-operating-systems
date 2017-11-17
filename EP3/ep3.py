@@ -176,13 +176,13 @@ def simulation(sim_parameters) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 1)
                     else :
                         LRU4(p_mem, count, i, i.times[0][0], p, 1)
-                    print_mem(0, s, p, v_mem, p_mem, l_procs)
                 #Atuaixa as estruturas mesmo se não houve page_fault.
                 else :
                     if (sim_parameters[2] == 3) :
                         LRU2(p_mem, matrix, i, i.times[0][0], p, 0)
                     else :
                         LRU4(p_mem, count, i, i.times[0][0], p, 0)
+                print_mem(0, s, p, v_mem, p_mem, l_procs)        
                 i.times.pop(0)
         remove_procs(l_procs, time, v_mem, p_mem, p_mem_indexes, matrix, count, sim_parameters[2])
         #Atualiza os arquivos de memória depois de remover processos.
