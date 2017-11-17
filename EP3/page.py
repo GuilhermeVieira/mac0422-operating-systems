@@ -1,3 +1,5 @@
+# Guilherme Costa Vieira               Nº USP: 9790930
+# Victor Chiaradia Gramuglia Araujo    Nº USP: 9793756
 import math
 
 #A função vê se a página que contem a posição p se encontra na p_mem.
@@ -8,19 +10,20 @@ def page_fault(pos, proc, p, p_mem) :
         return 0
     return 1
 
-def OPTIMAL(p_mem, next_pages, proc, pos, p) :
+def OPTIMAL(p_mem, next_pages, proc, pos, p, time) :
     page = math.floor((pos + proc.base*p)/p)
     if (-1 not in p_mem) :
         best = [-1, -1]
         for i in range(len(p_mem)) :
             for j in range(len(next_pages)) :
-                n_page = math.floor((next_pages[j][1] + next_pages[j][0].base*p)/p)
-                if (p_mem[i] == n_page) :
-                    temp = j
-                    if (temp > best[0]) :
-                        best[0] = temp
-                        best[1] = i
-                    break
+                if (not next_pages[j][0].t0 > time) :
+                    n_page = math.floor((next_pages[j][1] + next_pages[j][0].base*p)/p)
+                    if (p_mem[i] == n_page) :
+                        temp = j
+                        if (temp > best[0]) :
+                            best[0] = temp
+                            best[1] = i
+                        break
             if (next_pages and j == len(next_pages) - 1 and p_mem[-1] != page) :
                 best[1] = i
                 break

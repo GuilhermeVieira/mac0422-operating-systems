@@ -1,3 +1,5 @@
+# Guilherme Costa Vieira               Nº USP: 9790930
+# Victor Chiaradia Gramuglia Araujo    Nº USP: 9793756
 import sys
 import math
 import os
@@ -137,7 +139,6 @@ def simulation(sim_parameters) :
     to_arrive = []
     compact = []
     l_procs = []
-    p_mem = []
     p_mem_indexes = []
     matrix = []
     count = []
@@ -145,11 +146,9 @@ def simulation(sim_parameters) :
     time = 0
     tot, vit, s, p, qf_sizes = read_file(sim_parameters, to_arrive, compact, next_pages)
     v_mem = [[-1, 0, math.ceil(vit/p)]]
-
+    p_mem = [-1 for i in range(math.ceil(tot/p))]
     #Criação das estruturas adicionais de cada algoritmo.
     available = find_available(v_mem, qf_sizes)
-    for i in range(math.ceil(tot/p)) :
-        p_mem.append(-1)
     for i in range(len(p_mem)) :
         matrix.append([])
         for j in range(len(p_mem)) :
@@ -158,7 +157,7 @@ def simulation(sim_parameters) :
         count.append([])
         for j in range(len(p_mem)) :
             count[i].append(0)
-
+    print_mem(0, s, p, v_mem, p_mem, l_procs)
     #começa o loop dos processos.
     while (to_arrive or l_procs) :
         #Coloca todos os processos que chegaram na l_procs.
@@ -170,7 +169,7 @@ def simulation(sim_parameters) :
                     next_pages.pop(0)
                 if (page_fault(i.times[0][0], i, p, p_mem)) :
                     if (sim_parameters[2] == 1) :
-                        OPTIMAL(p_mem, next_pages, i, i.times[0][0], p)
+                        OPTIMAL(p_mem, next_pages, i, i.times[0][0], p, time)
                     elif (sim_parameters[2] == 2) :
                         FIFO(p_mem, p_mem_indexes, i, i.times[0][0], p)
                     elif (sim_parameters[2] == 3) :
@@ -207,7 +206,7 @@ def simulation(sim_parameters) :
     return
 
 def main() :
-    sim_parameters = ["big_bob.txt", 1, 1, 1]
+    sim_parameters = ["mother_bob.txt", 1, 2, 6]
     while(True) :
         print("[ep3] :", end = "")
         command = input()

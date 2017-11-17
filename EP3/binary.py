@@ -1,3 +1,5 @@
+# Guilherme Costa Vieira               Nº USP: 9790930
+# Victor Chiaradia Gramuglia Araujo    Nº USP: 9793756
 import os
 # Escreve em binário o vetor vector no arquivo filename
 def writeBin(filename, vector):
