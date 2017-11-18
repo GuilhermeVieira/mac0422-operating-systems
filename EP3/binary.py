@@ -3,16 +3,10 @@
 import os
 # Escreve em binário o vetor vector no arquivo filename
 def writeBin(filename, vector):
-    vectorBytes = []
-
-    for i in vector:
-        vectorBytes.append(i.to_bytes(1, byteorder = 'big', signed = True))
     filepath = os.path.join('/tmp', filename)
     binFile = open(filepath, "wb")
-
-    for i in vectorBytes:
-        binFile.write(i)
-
+    for i in vector:
+        binFile.write(i.to_bytes(1, byteorder = 'big', signed = True))
     binFile.close()
 
 # Retorna os bytes convertidos em inteiro lidos do arquivo filename.

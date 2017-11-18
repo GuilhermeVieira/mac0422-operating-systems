@@ -59,7 +59,6 @@ def quick_fit(v_mem, proc, s, p, qf_sizes, available) :
     n_pages = math.ceil((math.ceil((proc.b)/s)*s)/p)
     if (n_pages in qf_sizes) :
         i = qf_sizes.index(n_pages)
-        #como é garantido que há espaço não é nescessário ver se index deu erro.
         pos = available[i][0]
         if (v_mem[pos][2] - v_mem[pos][1] > n_pages) :
             v_mem.insert(pos + 1 ,[-1, v_mem[pos][1] + n_pages, v_mem[pos][2]])

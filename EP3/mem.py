@@ -5,7 +5,7 @@ import math
 
 #Junta todas as partes vazias concecutivas da memória.
 def glue_mem(v_mem) :
-    #rejuntar a mémoria != desfragmentar
+    #rejuntar a mémoria != compactar.
     i = 0
     while (i < len(v_mem)) :
         if (v_mem[i][0] != -1) :

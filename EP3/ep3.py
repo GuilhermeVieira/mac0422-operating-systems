@@ -3,14 +3,16 @@
 import sys
 import math
 import os
-from timeit import default_timer as timer
 from statistics import mean
+from timeit import default_timer as timer
+from xlwt import Workbook
 from page import *
 from fit import *
 from mem import *
-from xlwt import Workbook
 from time import sleep
+
 tempo = []
+page = 0
 
 class process:
     def __init__(self, t0, tf, b, name, pid) :
@@ -65,6 +67,10 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available, p_me
             end = timer()
             tempo.append(end -begin)
             print_mem(0, s, p, v_mem, p_mem, l_procs)
+        #to_arrive esta ordenada, logo não precisamos continuar procurando.
+        elif (i.t0 > time) :
+            break
+    #Tiramos os processos com t0 == time da to_arrive.
     to_arrive[:] = [x for x in to_arrive if not x.t0 == time]
     return
 
@@ -78,6 +84,8 @@ def remove_procs(l_procs, time, v_mem, p_mem, indexes, matrix, count, algo) :
             for j in range(len(v_mem)) :
                 if (v_mem[j][0] == i.pid) :
                     v_mem[j][0] = -1
+                    #Todo processo esta em uma parte continua da v_mem.
+                    break
             for j in range(len(p_mem)) :
                 #Retirar o processe da memória física.
                 if (p_mem[j] >= i.base and p_mem[j] < i.top):
@@ -110,20 +118,24 @@ def read_file(sim_parameters, to_arrive, compact, next_pages) :
         filepath = os.path.join(sim_parameters[0], "")
         file = open(filepath, "r")
     line = file.readline()
-    tot, vit, s, p = int(line.split()[0]), int(line.split()[1]), int(line.split()[2]), int(line.split()[3])
+    parse_line = line.split()
+    tot, vit, s, p = int(parse_line[0]), int(parse_line[1]), int(parse_line[2]), int(parse_line[3])
     for line in file :
-        if (len(line.split()) == 2) :
-            compact.append(int(line.split()[0]))
+        parse_line = line.split()
+        if (len(parse_line) == 2) :
+            compact.append(int(parse_line[0]))
             continue
-        to_arrive.append(process(int(line.split()[0]),int(line.split()[1]),int(line.split()[2]),line.split()[3], pid))
+        to_arrive.append(process(int(parse_line[0]),int(parse_line[1]),int(parse_line[2]),parse_line[3], pid))
         pid += 1
-        for i in range(4, len(line.split()), 2) :
-            b = int(line.split()[i])
-            t = int(line.split()[i + 1])
+        for i in range(4, len(parse_line), 2) :
+            b = int(parse_line[i])
+            t = int(parse_line[i + 1])
             to_arrive[-1].addExec(b, t)
             next_pages.append([to_arrive[-1], b, t])
     file.close()
     #Criação da estrutura adicional.
+
+    #ordenar por t0.
     next_pages.sort(key = lambda x: x[2])
     pid += 1
     num_of_lists = math.ceil(pid*.1)
@@ -131,22 +143,20 @@ def read_file(sim_parameters, to_arrive, compact, next_pages) :
     for i in to_arrive:
         x = math.ceil((math.ceil((i.b)/s)*s)/p)
         sizes.append(x)
-    sizes.sort()
-    sizes = sorted(sizes,key=sizes.count,reverse=True)
+    sizes = sorted(sizes, key = sizes.count, reverse = True)
+    #Tirar os repetidos da seizes.
     for i in sizes:
         x = sizes.count(i)
         if (x > 1):
-            for j in range (x-1):
+            for j in range (x - 1):
                 sizes.remove(i)
     sizes = sizes[:num_of_lists]
-    # Não há certeza se a alocação é por páginas ou bytes
-    # O algoritmo não excluí a alocação de uma unidade (página ou ua)
     return(tot, vit, s, p, sizes)
 
 def simulation(sim_parameters) :
     to_arrive = []
-    compact = []
     l_procs = []
+    compact = []
     p_mem_indexes = []
     matrix = []
     count = []
@@ -159,13 +169,12 @@ def simulation(sim_parameters) :
     available = find_available(v_mem, qf_sizes)
     for i in range(len(p_mem)) :
         matrix.append([])
-        for j in range(len(p_mem)) :
-            matrix[i].append(0)
-    for i in range(len(p_mem)) :
         count.append([])
         for j in range(len(p_mem)) :
+            matrix[i].append(0)
             count[i].append(0)
     print_mem(0, s, p, v_mem, p_mem, l_procs)
+
     #começa o loop dos processos.
     while (to_arrive or l_procs) :
         #Coloca todos os processos que chegaram na l_procs.
@@ -176,6 +185,8 @@ def simulation(sim_parameters) :
                 if (sim_parameters[2] == 1) :
                     next_pages.pop(0)
                 if (page_fault(i.times[0][0], i, p, p_mem)) :
+                    global page
+                    page += 1
                     if (sim_parameters[2] == 1) :
                         OPTIMAL(p_mem, next_pages, i, i.times[0][0], p, time)
                     elif (sim_parameters[2] == 2) :
@@ -211,19 +222,18 @@ def simulation(sim_parameters) :
         if (time%sim_parameters[3] == 0 and time != 0) :
             print_mem(1, s, p, v_mem, p_mem, l_procs)
         time += 1
-    print(tempo)
     return
 
 def main() :
-    sim_parameters = ["mother_bob.txt", 1, 2, 6]
+    sim_parameters = ["mother_bob.txt", 3, 2, 60]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
         if(parse_command(command, sim_parameters)) :
             simulation(sim_parameters)
 
-#main()
-from xlwt import Workbook
+main()
+
 sim_parameters = ["mother_bob.txt", 1, 1, 60]
 wb = Workbook()
 deadlines_sheet = wb.add_sheet('fit')
@@ -231,20 +241,61 @@ deadlines_sheet.write(0,0, "MEDIDAS")
 for i in range(30):
 	deadlines_sheet.write(i + 1,0, "Medição "+str(i+1))
 deadlines_sheet.write(0, 1, "best")
-deadlines_sheet.write(0, 2,"worst")
-deadlines_sheet.write(0, 3,"quick")
+deadlines_sheet.write(0, 2, "worst")
+deadlines_sheet.write(0, 3, "quick")
 for bob in range(30) :
     simulation(sim_parameters)
+    print(tempo)
     deadlines_sheet.write(bob + 1, 1, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
 sleep(10)
 sim_parameters = ["mother_bob.txt", 2, 1, 60]
 for bob in range(30) :
     simulation(sim_parameters)
+    print(tempo)
     deadlines_sheet.write(bob + 1, 2, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
 sleep(10)
 sim_parameters = ["mother_bob.txt", 3, 1, 60]
 for bob in range(30) :
     simulation(sim_parameters)
+    print(tempo)
     deadlines_sheet.write(bob + 1, 3, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
+wb.save('fits.xls')
 
-wb.save('acabeiDeRodarRENOMEAR.xls')
+wb = Workbook()
+deadlines_sheet = wb.add_sheet('page')
+deadlines_sheet.write(0,0, "MEDIDAS")
+for i in range(30):
+	deadlines_sheet.write(i + 1,0, "Medição "+str(i+1))
+deadlines_sheet.write(0, 1, "OPTIMAL")
+deadlines_sheet.write(0, 2, "FIFO")
+deadlines_sheet.write(0, 3, "LRU2")
+deadlines_sheet.write(0, 4, "LRU4")
+
+sim_parameters = ["mother_bob.txt", 1, 1, 60]
+for bob in range(30) :
+    simulation(sim_parameters)
+    print(tempo)
+    deadlines_sheet.write(bob + 1, 1, page)
+sleep(10)
+
+sim_parameters = ["mother_bob.txt", 1, 2, 60]
+for bob in range(30) :
+    simulation(sim_parameters)
+    print(tempo)
+    deadlines_sheet.write(bob + 1, 2, page)
+sleep(10)
+
+sim_parameters = ["mother_bob.txt", 1, 3, 60]
+for bob in range(30) :
+    simulation(sim_parameters)
+    print(tempo)
+    deadlines_sheet.write(bob + 1, 3, page)
+sleep(10)
+
+sim_parameters = ["mother_bob.txt", 1, 4, 60]
+for bob in range(30) :
+    simulation(sim_parameters)
+    print(tempo)
+    deadlines_sheet.write(bob + 1, 4, page)
+
+wb.save('page_fault.xls')

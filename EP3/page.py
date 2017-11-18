@@ -16,6 +16,7 @@ def OPTIMAL(p_mem, next_pages, proc, pos, p, time) :
         best = [-1, -1]
         for i in range(len(p_mem)) :
             for j in range(len(next_pages)) :
+                #Vê se o processo já foi colocado na v_mem.
                 if (not next_pages[j][0].t0 > time) :
                     n_page = math.floor((next_pages[j][1] + next_pages[j][0].base*p)/p)
                     if (p_mem[i] == n_page) :
@@ -24,6 +25,8 @@ def OPTIMAL(p_mem, next_pages, proc, pos, p, time) :
                             best[0] = temp
                             best[1] = i
                         break
+            #Se não achamos a página, ela não sera acessada no futuro, assim ela
+            #é a melhor para ser substituida.            
             if (next_pages and j == len(next_pages) - 1 and p_mem[-1] != page) :
                 best[1] = i
                 break
