@@ -66,7 +66,7 @@ def compact_pmem(mem, indexes, matrix, count, algo, size) :
             elif (algo == 4) :
                 count[i + size] = [l for l in count[j + size]]
                 count[j + size] = [0 for l in count[j + size]]
-            mem[i+1:] = compact_pmem(mem[i+1:], indexes, matrix, count, algo, i+1)
+            mem[i+1:] = compact_pmem(mem[i + 1: ], indexes, matrix, count, algo, size + i + 1)
     return mem
 
 #Se houve uma compactação a base e o topo de um processo deve ser alterado.

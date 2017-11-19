@@ -3,17 +3,9 @@
 import sys
 import math
 import os
-from statistics import mean
-from timeit import default_timer as timer
-from xlwt import Workbook
 from page import *
 from fit import *
 from mem import *
-from time import sleep
-
-tempo = []
-page = 0
-
 class process:
     def __init__(self, t0, tf, b, name, pid) :
         self.t0 = t0
@@ -57,15 +49,12 @@ def arrive(to_arrive, l_procs, time, v_mem, alg, s, p, qf_sizes, available, p_me
             l_procs.append(i)
             #Como os processos já chegaram vamos usar os alg's de fit para alocar
             #os espaço nescessário na memória virtual.
-            begin = timer()
             if (alg == 1) :
                 best_fit(v_mem, i, s, p)
             elif (alg == 2) :
                 worst_fit(v_mem, i, s, p)
             else :
                 quick_fit(v_mem, i, s, p, qf_sizes, available)
-            end = timer()
-            tempo.append(end -begin)
             print_mem(0, s, p, v_mem, p_mem, l_procs)
         #to_arrive esta ordenada, logo não precisamos continuar procurando.
         elif (i.t0 > time) :
@@ -185,8 +174,6 @@ def simulation(sim_parameters) :
                 if (sim_parameters[2] == 1) :
                     next_pages.pop(0)
                 if (page_fault(i.times[0][0], i, p, p_mem)) :
-                    global page
-                    page += 1
                     if (sim_parameters[2] == 1) :
                         OPTIMAL(p_mem, next_pages, i, i.times[0][0], p, time)
                     elif (sim_parameters[2] == 2) :
@@ -225,7 +212,7 @@ def simulation(sim_parameters) :
     return
 
 def main() :
-    sim_parameters = ["mother_bob.txt", 3, 2, 60]
+    sim_parameters = ["bob.txt", 1, 1, 1]
     while(True) :
         print("[ep3] :", end = "")
         command = input()
@@ -233,69 +220,3 @@ def main() :
             simulation(sim_parameters)
 
 main()
-
-sim_parameters = ["mother_bob.txt", 1, 1, 60]
-wb = Workbook()
-deadlines_sheet = wb.add_sheet('fit')
-deadlines_sheet.write(0,0, "MEDIDAS")
-for i in range(30):
-	deadlines_sheet.write(i + 1,0, "Medição "+str(i+1))
-deadlines_sheet.write(0, 1, "best")
-deadlines_sheet.write(0, 2, "worst")
-deadlines_sheet.write(0, 3, "quick")
-for bob in range(30) :
-    simulation(sim_parameters)
-    print(tempo)
-    deadlines_sheet.write(bob + 1, 1, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
-sleep(10)
-sim_parameters = ["mother_bob.txt", 2, 1, 60]
-for bob in range(30) :
-    simulation(sim_parameters)
-    print(tempo)
-    deadlines_sheet.write(bob + 1, 2, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
-sleep(10)
-sim_parameters = ["mother_bob.txt", 3, 1, 60]
-for bob in range(30) :
-    simulation(sim_parameters)
-    print(tempo)
-    deadlines_sheet.write(bob + 1, 3, round(1000000 * mean(tempo), 9)) # Nº que cumpriu deadline
-wb.save('fits.xls')
-
-wb = Workbook()
-deadlines_sheet = wb.add_sheet('page')
-deadlines_sheet.write(0,0, "MEDIDAS")
-for i in range(30):
-	deadlines_sheet.write(i + 1,0, "Medição "+str(i+1))
-deadlines_sheet.write(0, 1, "OPTIMAL")
-deadlines_sheet.write(0, 2, "FIFO")
-deadlines_sheet.write(0, 3, "LRU2")
-deadlines_sheet.write(0, 4, "LRU4")
-
-sim_parameters = ["mother_bob.txt", 1, 1, 60]
-for bob in range(30) :
-    simulation(sim_parameters)
-    print(tempo)
-    deadlines_sheet.write(bob + 1, 1, page)
-sleep(10)
-
-sim_parameters = ["mother_bob.txt", 1, 2, 60]
-for bob in range(30) :
-    simulation(sim_parameters)
-    print(tempo)
-    deadlines_sheet.write(bob + 1, 2, page)
-sleep(10)
-
-sim_parameters = ["mother_bob.txt", 1, 3, 60]
-for bob in range(30) :
-    simulation(sim_parameters)
-    print(tempo)
-    deadlines_sheet.write(bob + 1, 3, page)
-sleep(10)
-
-sim_parameters = ["mother_bob.txt", 1, 4, 60]
-for bob in range(30) :
-    simulation(sim_parameters)
-    print(tempo)
-    deadlines_sheet.write(bob + 1, 4, page)
-
-wb.save('page_fault.xls')
