@@ -32,5 +32,5 @@ Security.
 
 #### Contributors
 ---
- * Guilherme Vieira - @GuilhermeVieira
- * Victor Araujo - @PaiZuZE
+ * Guilherme Vieira - [@GuilhermeVieira](https://github.com/GuilhermeVieira)
+ * Victor Araujo - [@PaiZuZe](https://github.com/PaiZuZe)
