@@ -1,6 +1,6 @@
 <h2>Operating Systems </h2>
 
-<p>The description of the [course:](https://bcc.ime.usp.br/catalogo2017/disciplinas/MAC0422.html)</p>
+<p>The description of the <a href="https://bcc.ime.usp.br/catalogo2017/disciplinas/MAC0422")>course:</a> </p>
 
 <p><strong>Objectives:</strong> Expose the students to the computer operating systems fundamentals and its implementations techniques.</p>
 
