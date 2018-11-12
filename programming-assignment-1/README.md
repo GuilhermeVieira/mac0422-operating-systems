@@ -1,8 +1,12 @@
 ### Programming Assignment 1
 
+---
+
 Guilherme Costa Vieira               Nº USP: 9790930
 
 Victor Chiaradia Gramuglia Araujo    Nº USP: 9793756
+
+---
 
 The python script was made to run the program several times to make statistical experiments for the report.
 
