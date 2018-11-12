@@ -1,6 +1,5 @@
 <h2>Operating Systems </h2>
 
----
 
 <p>The description of the course:</p>
 
@@ -27,6 +26,8 @@ Types of file systems: sequential, indexed and direct access, hierarchy standard
 Security.
  </p>
 
+#### Note
+---
 <p>There are three programming assignments, the first two were written in C and the last one was written in Python 3, each one of them is in a different folder. Every folder contains the source code and two files: the description of the programming assignment and a report presentation made for the class, both in Portuguese. </p>
 
 
